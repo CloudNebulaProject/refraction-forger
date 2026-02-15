@@ -1,0 +1,38 @@
+metadata name="ubuntu-rust-ci" version="0.1.0" description="Ubuntu 22.04 CI image with Rust"
+
+distro "ubuntu-22.04"
+
+repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+}
+
+packages {
+    package "build-essential"
+    package "pkg-config"
+    package "curl"
+    package "git"
+    package "ca-certificates"
+    package "rustc"
+    package "cargo"
+    package "libssl-dev"
+    package "openssh-server"
+    package "cloud-init"
+    package "grub-efi-amd64"
+    package "linux-image-generic"
+}
+
+customization {
+    user "ci"
+}
+
+overlays {
+    shadow username="root" password="$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9"
+    ensure-dir "/home/ci" owner="ci" group="ci" mode="755"
+}
+
+target "qcow2" kind="qcow2" {
+    disk-size "8G"
+    bootloader "grub"
+    filesystem "ext4"
+    push-to "ghcr.io/cloudnebulaproject/ubuntu-rust:latest"
+}

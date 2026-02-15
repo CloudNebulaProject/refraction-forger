@@ -1,9 +1,30 @@
 use knuffel::Decode;
 
+/// Distro family derived from the `distro` string in a spec.
+/// Not KDL-decoded directly — computed via `from_distro_str`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum DistroFamily {
+    #[default]
+    OmniOS,
+    Ubuntu,
+}
+
+impl DistroFamily {
+    pub fn from_distro_str(s: Option<&str>) -> Self {
+        match s {
+            Some(d) if d.starts_with("ubuntu") => DistroFamily::Ubuntu,
+            _ => DistroFamily::OmniOS,
+        }
+    }
+}
+
 #[derive(Debug, Decode)]
 pub struct ImageSpec {
     #[knuffel(child)]
     pub metadata: Metadata,
+
+    #[knuffel(child, unwrap(argument))]
+    pub distro: Option<String>,
 
     #[knuffel(child, unwrap(argument))]
     pub base: Option<String>,
@@ -53,6 +74,19 @@ pub struct Metadata {
 pub struct Repositories {
     #[knuffel(children(name = "publisher"))]
     pub publishers: Vec<Publisher>,
+
+    #[knuffel(children(name = "apt-mirror"))]
+    pub apt_mirrors: Vec<AptMirror>,
+}
+
+#[derive(Debug, Decode)]
+pub struct AptMirror {
+    #[knuffel(argument)]
+    pub url: String,
+    #[knuffel(property)]
+    pub suite: String,
+    #[knuffel(property)]
+    pub components: Option<String>,
 }
 
 #[derive(Debug, Decode)]
@@ -186,6 +220,12 @@ pub struct Target {
 
     #[knuffel(child, unwrap(argument))]
     pub bootloader: Option<String>,
+
+    #[knuffel(child, unwrap(argument))]
+    pub filesystem: Option<String>,
+
+    #[knuffel(child, unwrap(argument))]
+    pub push_to: Option<String>,
 
     #[knuffel(child)]
     pub entrypoint: Option<Entrypoint>,

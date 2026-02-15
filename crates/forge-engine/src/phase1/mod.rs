@@ -1,12 +1,13 @@
 pub mod customizations;
 pub mod overlays;
 pub mod packages;
+pub mod packages_apt;
 pub mod staging;
 pub mod variants;
 
 use std::path::{Path, PathBuf};
 
-use spec_parser::schema::ImageSpec;
+use spec_parser::schema::{DistroFamily, ImageSpec};
 use tracing::info;
 
 use crate::error::ForgeError;
@@ -22,19 +23,15 @@ pub struct Phase1Result {
 
 /// Execute Phase 1: assemble a rootfs in a staging directory from the spec.
 ///
-/// Steps:
-/// 1. Create staging directory
-/// 2. Extract base tarball (if specified)
-/// 3. Apply IPS variants
-/// 4. Configure package repositories and install packages
-/// 5. Apply customizations (users, groups)
-/// 6. Apply overlays (files, dirs, symlinks, shadow, devfsadm)
+/// Dispatches to the appropriate distro-specific path based on the `distro` field,
+/// then applies common customizations and overlays.
 pub async fn execute(
     spec: &ImageSpec,
     files_dir: &Path,
     runner: &dyn ToolRunner,
 ) -> Result<Phase1Result, ForgeError> {
-    info!(name = %spec.metadata.name, "Starting Phase 1: rootfs assembly");
+    let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
+    info!(name = %spec.metadata.name, ?distro, "Starting Phase 1: rootfs assembly");
 
     // 1. Create staging directory
     let (staging_dir, staging_root) = staging::create_staging()?;
@@ -46,41 +43,18 @@ pub async fn execute(
         staging::extract_base_tarball(base, &staging_root)?;
     }
 
-    // 3. Create IPS image and configure publishers
-    crate::tools::pkg::image_create(runner, root).await?;
-
-    for publisher in &spec.repositories.publishers {
-        crate::tools::pkg::set_publisher(runner, root, &publisher.name, &publisher.origin).await?;
+    // 3. Distro-specific package management
+    match distro {
+        DistroFamily::OmniOS => execute_ips(spec, root, files_dir, runner).await?,
+        DistroFamily::Ubuntu => execute_apt(spec, root, runner).await?,
     }
 
-    // 4. Apply variants
-    if let Some(ref vars) = spec.variants {
-        variants::apply_variants(runner, root, vars).await?;
-    }
-
-    // 5. Approve CA certificates
-    if let Some(ref certs) = spec.certificates {
-        for ca in &certs.ca {
-            let certfile_path = files_dir.join(&ca.certfile);
-            let certfile_str = certfile_path.to_str().unwrap_or(&ca.certfile);
-            crate::tools::pkg::approve_ca_cert(runner, root, &ca.publisher, certfile_str).await?;
-        }
-    }
-
-    // 6. Set incorporation
-    if let Some(ref incorporation) = spec.incorporation {
-        crate::tools::pkg::set_incorporation(runner, root, incorporation).await?;
-    }
-
-    // 7. Install packages
-    packages::install_all(runner, root, &spec.packages).await?;
-
-    // 8. Apply customizations
+    // 4. Apply customizations (common)
     for customization in &spec.customizations {
         customizations::apply(customization, &staging_root)?;
     }
 
-    // 9. Apply overlays
+    // 5. Apply overlays (common)
     for overlay_block in &spec.overlays {
         overlays::apply_overlays(&overlay_block.actions, &staging_root, files_dir, runner).await?;
     }
@@ -91,4 +65,76 @@ pub async fn execute(
         staging_root,
         _staging_dir: staging_dir,
     })
+}
+
+/// IPS/OmniOS-specific Phase 1: pkg image-create, publishers, variants, certs, install.
+async fn execute_ips(
+    spec: &ImageSpec,
+    root: &str,
+    files_dir: &Path,
+    runner: &dyn ToolRunner,
+) -> Result<(), ForgeError> {
+    info!("Executing IPS package management path");
+
+    crate::tools::pkg::image_create(runner, root).await?;
+
+    for publisher in &spec.repositories.publishers {
+        crate::tools::pkg::set_publisher(runner, root, &publisher.name, &publisher.origin).await?;
+    }
+
+    if let Some(ref vars) = spec.variants {
+        variants::apply_variants(runner, root, vars).await?;
+    }
+
+    if let Some(ref certs) = spec.certificates {
+        for ca in &certs.ca {
+            let certfile_path = files_dir.join(&ca.certfile);
+            let certfile_str = certfile_path.to_str().unwrap_or(&ca.certfile);
+            crate::tools::pkg::approve_ca_cert(runner, root, &ca.publisher, certfile_str).await?;
+        }
+    }
+
+    if let Some(ref incorporation) = spec.incorporation {
+        crate::tools::pkg::set_incorporation(runner, root, incorporation).await?;
+    }
+
+    packages::install_all(runner, root, &spec.packages).await?;
+
+    Ok(())
+}
+
+/// APT/Ubuntu-specific Phase 1: debootstrap, add sources, apt update, apt install.
+async fn execute_apt(
+    spec: &ImageSpec,
+    root: &str,
+    runner: &dyn ToolRunner,
+) -> Result<(), ForgeError> {
+    info!("Executing APT package management path");
+
+    // Determine suite and mirror from apt-mirror entries
+    let first_mirror = spec.repositories.apt_mirrors.first();
+    let suite = first_mirror
+        .map(|m| m.suite.as_str())
+        .unwrap_or("jammy");
+    let mirror_url = first_mirror
+        .map(|m| m.url.as_str())
+        .unwrap_or("http://archive.ubuntu.com/ubuntu");
+
+    // Bootstrap the rootfs
+    crate::tools::apt::debootstrap(runner, suite, root, mirror_url).await?;
+
+    // Add any additional APT mirror sources (skip the first one used for debootstrap)
+    for mirror in spec.repositories.apt_mirrors.iter().skip(1) {
+        let components = mirror.components.as_deref().unwrap_or("main");
+        let entry = format!("deb {} {} {}", mirror.url, mirror.suite, components);
+        crate::tools::apt::add_source(runner, root, &entry).await?;
+    }
+
+    // Update package lists
+    crate::tools::apt::update(runner, root).await?;
+
+    // Install packages
+    packages_apt::install_all(runner, root, &spec.packages).await?;
+
+    Ok(())
 }

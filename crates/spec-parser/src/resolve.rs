@@ -134,6 +134,11 @@ fn merge_base(mut base: ImageSpec, child: ImageSpec) -> ImageSpec {
     // Metadata comes from the child
     base.metadata = child.metadata;
 
+    // distro: child overrides
+    if child.distro.is_some() {
+        base.distro = child.distro;
+    }
+
     // build_host: child overrides
     if child.build_host.is_some() {
         base.build_host = child.build_host;
@@ -148,6 +153,18 @@ fn merge_base(mut base: ImageSpec, child: ImageSpec) -> ImageSpec {
             .any(|p| p.name == pub_entry.name)
         {
             base.repositories.publishers.push(pub_entry);
+        }
+    }
+
+    // repositories: merge apt_mirrors from child into base (dedup by URL)
+    for mirror in child.repositories.apt_mirrors {
+        if !base
+            .repositories
+            .apt_mirrors
+            .iter()
+            .any(|m| m.url == mirror.url)
+        {
+            base.repositories.apt_mirrors.push(mirror);
         }
     }
 
@@ -294,6 +311,71 @@ mod tests {
         assert_eq!(resolved.packages[0].packages[0].name, "base/pkg");
         assert_eq!(resolved.packages[1].packages[0].name, "child/pkg");
         assert_eq!(resolved.targets.len(), 1);
+    }
+
+    #[test]
+    fn test_merge_base_with_apt_mirrors() {
+        let tmp = TempDir::new().unwrap();
+
+        let base_kdl = r#"
+            metadata name="base" version="0.0.1"
+            distro "ubuntu-22.04"
+            repositories {
+                apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+            }
+            packages {
+                package "base-pkg"
+            }
+        "#;
+        fs::write(tmp.path().join("base.kdl"), base_kdl).unwrap();
+
+        let child_kdl = r#"
+            metadata name="child" version="1.0.0"
+            base "base.kdl"
+            repositories {
+                apt-mirror "http://ppa.launchpad.net/extra" suite="jammy" components="main"
+            }
+            packages {
+                package "child-pkg"
+            }
+        "#;
+
+        let spec = crate::parse(child_kdl).unwrap();
+        let resolved = resolve(spec, tmp.path()).unwrap();
+
+        assert_eq!(resolved.distro, Some("ubuntu-22.04".to_string()));
+        assert_eq!(resolved.repositories.apt_mirrors.len(), 2);
+        assert_eq!(
+            resolved.repositories.apt_mirrors[0].url,
+            "http://archive.ubuntu.com/ubuntu"
+        );
+        assert_eq!(
+            resolved.repositories.apt_mirrors[1].url,
+            "http://ppa.launchpad.net/extra"
+        );
+    }
+
+    #[test]
+    fn test_merge_base_distro_child_overrides() {
+        let tmp = TempDir::new().unwrap();
+
+        let base_kdl = r#"
+            metadata name="base" version="0.0.1"
+            repositories {}
+        "#;
+        fs::write(tmp.path().join("base.kdl"), base_kdl).unwrap();
+
+        let child_kdl = r#"
+            metadata name="child" version="1.0.0"
+            base "base.kdl"
+            distro "ubuntu-22.04"
+            repositories {}
+        "#;
+
+        let spec = crate::parse(child_kdl).unwrap();
+        let resolved = resolve(spec, tmp.path()).unwrap();
+
+        assert_eq!(resolved.distro, Some("ubuntu-22.04".to_string()));
     }
 
     #[test]

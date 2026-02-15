@@ -36,6 +36,25 @@ pub async fn detach(runner: &dyn ToolRunner, device: &str) -> Result<(), ForgeEr
     Ok(())
 }
 
+/// Re-read the partition table of a device.
+#[cfg(target_os = "linux")]
+pub async fn partprobe(runner: &dyn ToolRunner, device: &str) -> Result<(), ForgeError> {
+    info!(device, "Re-reading partition table (partprobe)");
+    runner.run("partprobe", &[device]).await?;
+    Ok(())
+}
+
+#[cfg(target_os = "illumos")]
+pub async fn partprobe(_runner: &dyn ToolRunner, _device: &str) -> Result<(), ForgeError> {
+    // illumos doesn't need partprobe for lofi devices
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "illumos")))]
+pub async fn partprobe(_runner: &dyn ToolRunner, _device: &str) -> Result<(), ForgeError> {
+    Ok(())
+}
+
 // Stub for unsupported platforms (compile-time guard)
 #[cfg(not(any(target_os = "linux", target_os = "illumos")))]
 pub async fn attach(_runner: &dyn ToolRunner, file_path: &str) -> Result<String, ForgeError> {

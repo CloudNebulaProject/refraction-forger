@@ -41,7 +41,7 @@ pub enum AuthConfig {
 }
 
 impl AuthConfig {
-    fn to_registry_auth(&self) -> RegistryAuth {
+    pub fn to_registry_auth(&self) -> RegistryAuth {
         match self {
             AuthConfig::Anonymous => RegistryAuth::Anonymous,
             AuthConfig::Basic { username, password } => {

@@ -63,6 +63,8 @@ mod tests {
             kind: TargetKind::Oci,
             disk_size: None,
             bootloader: None,
+            filesystem: None,
+            push_to: None,
             entrypoint,
             environment: env,
             pool: None,

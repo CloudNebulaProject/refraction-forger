@@ -130,6 +130,95 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_ubuntu_spec() {
+        let kdl = r#"
+            metadata name="ubuntu-ci" version="0.1.0"
+            distro "ubuntu-22.04"
+            repositories {
+                apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+            }
+            packages {
+                package "build-essential"
+                package "curl"
+            }
+            target "qcow2" kind="qcow2" {
+                disk-size "8G"
+                bootloader "grub"
+                filesystem "ext4"
+                push-to "ghcr.io/cloudnebulaproject/ubuntu-rust:latest"
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse Ubuntu spec");
+        assert_eq!(spec.distro, Some("ubuntu-22.04".to_string()));
+        assert_eq!(spec.repositories.apt_mirrors.len(), 1);
+        let mirror = &spec.repositories.apt_mirrors[0];
+        assert_eq!(mirror.url, "http://archive.ubuntu.com/ubuntu");
+        assert_eq!(mirror.suite, "jammy");
+        assert_eq!(mirror.components, Some("main universe".to_string()));
+
+        let target = &spec.targets[0];
+        assert_eq!(target.filesystem, Some("ext4".to_string()));
+        assert_eq!(
+            target.push_to,
+            Some("ghcr.io/cloudnebulaproject/ubuntu-rust:latest".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_omnios_spec_unchanged() {
+        // Existing OmniOS specs should parse without errors (backward compat)
+        let kdl = r#"
+            metadata name="omnios-disk" version="0.0.1"
+            repositories {
+                publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+            }
+            packages {
+                package "system/kernel"
+            }
+            target "vm" kind="qcow2" {
+                disk-size "2000M"
+                bootloader "uefi"
+                pool {
+                    property name="ashift" value="12"
+                }
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse OmniOS spec");
+        assert_eq!(spec.distro, None);
+        assert!(spec.repositories.apt_mirrors.is_empty());
+        assert_eq!(spec.targets[0].filesystem, None);
+        assert_eq!(spec.targets[0].push_to, None);
+
+        // DistroFamily should default to OmniOS
+        assert_eq!(
+            schema::DistroFamily::from_distro_str(spec.distro.as_deref()),
+            schema::DistroFamily::OmniOS
+        );
+    }
+
+    #[test]
+    fn test_distro_family_detection() {
+        assert_eq!(
+            schema::DistroFamily::from_distro_str(None),
+            schema::DistroFamily::OmniOS
+        );
+        assert_eq!(
+            schema::DistroFamily::from_distro_str(Some("omnios")),
+            schema::DistroFamily::OmniOS
+        );
+        assert_eq!(
+            schema::DistroFamily::from_distro_str(Some("ubuntu-22.04")),
+            schema::DistroFamily::Ubuntu
+        );
+        assert_eq!(
+            schema::DistroFamily::from_distro_str(Some("ubuntu-24.04")),
+            schema::DistroFamily::Ubuntu
+        );
+    }
+
+    #[test]
     fn test_parse_pool_properties() {
         let kdl = r#"
             metadata name="test" version="0.1.0"

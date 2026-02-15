@@ -1,6 +1,8 @@
+pub mod apt;
 pub mod bootloader;
 pub mod devfsadm;
 pub mod loopback;
+pub mod partition;
 pub mod pkg;
 pub mod qemu_img;
 pub mod zfs;

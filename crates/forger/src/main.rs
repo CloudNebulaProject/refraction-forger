@@ -56,9 +56,9 @@ enum Commands {
         profile: Vec<String>,
     },
 
-    /// Push an OCI Image Layout to a registry
+    /// Push an OCI Image Layout or QCOW2 artifact to a registry
     Push {
-        /// Path to the OCI Image Layout directory
+        /// Path to the OCI Image Layout directory (or QCOW2 file with --artifact)
         #[arg(short, long)]
         image: PathBuf,
 
@@ -69,6 +69,10 @@ enum Commands {
         /// Path to auth file (JSON with username/password or token)
         #[arg(short, long)]
         auth_file: Option<PathBuf>,
+
+        /// Push as a QCOW2 OCI artifact instead of an OCI Image Layout
+        #[arg(long)]
+        artifact: bool,
     },
 
     /// List available targets from a spec file
@@ -108,8 +112,9 @@ async fn main() -> Result<()> {
             image,
             reference,
             auth_file,
+            artifact,
         } => {
-            commands::push::run(&image, &reference, auth_file.as_ref()).await?;
+            commands::push::run(&image, &reference, auth_file.as_ref(), artifact).await?;
         }
         Commands::Targets { spec } => {
             commands::targets::run(&spec)?;

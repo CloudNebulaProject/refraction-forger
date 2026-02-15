@@ -28,9 +28,20 @@ pub fn run(spec_path: &PathBuf, profiles: &[String]) -> miette::Result<()> {
         println!("Description: {desc}");
     }
 
+    if let Some(ref distro) = filtered.distro {
+        println!("Distro: {distro}");
+    }
+
     println!("\nRepositories:");
     for pub_entry in &filtered.repositories.publishers {
         println!("  {} -> {}", pub_entry.name, pub_entry.origin);
+    }
+    for mirror in &filtered.repositories.apt_mirrors {
+        print!("  apt-mirror: {} suite={}", mirror.url, mirror.suite);
+        if let Some(ref components) = mirror.components {
+            print!(" components={components}");
+        }
+        println!();
     }
 
     if let Some(ref inc) = filtered.incorporation {
@@ -123,6 +134,12 @@ pub fn run(spec_path: &PathBuf, profiles: &[String]) -> miette::Result<()> {
             }
             if let Some(ref bl) = target.bootloader {
                 print!(" bootloader={bl}");
+            }
+            if let Some(ref fs) = target.filesystem {
+                print!(" filesystem={fs}");
+            }
+            if let Some(ref push) = target.push_to {
+                print!(" push-to={push}");
             }
             println!();
         }

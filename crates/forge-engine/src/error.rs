@@ -118,6 +118,20 @@ pub enum ForgeError {
     )]
     TargetNotFound { name: String, available: String },
 
+    #[error("Unsupported filesystem '{fs_type}' for target '{target}'")]
+    #[diagnostic(
+        help("Supported filesystems are 'zfs' (default for OmniOS) and 'ext4' (for Ubuntu/Linux). Set `filesystem \"zfs\"` or `filesystem \"ext4\"` in the target block."),
+        code(forge::unsupported_filesystem)
+    )]
+    UnsupportedFilesystem { fs_type: String, target: String },
+
+    #[error("OCI artifact push failed for {reference}")]
+    #[diagnostic(
+        help("Check that the registry is reachable, credentials are valid (GITHUB_TOKEN for ghcr.io), and the reference format is correct.\n{detail}"),
+        code(forge::artifact_push_failed)
+    )]
+    ArtifactPushFailed { reference: String, detail: String },
+
     #[error("IO error")]
     Io(#[from] std::io::Error),
 }

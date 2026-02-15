@@ -1,0 +1,33 @@
+metadata name="omnios-rust-ci" version="0.1.0" description="OmniOS bloody CI image with Rust"
+
+distro "omnios"
+base "omnios-bloody-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+repositories {}
+
+packages {
+    package "/system/management/cloud-init"
+    package "/driver/crypto/viorand"
+    package "/driver/network/vioif"
+    package "/driver/storage/vioblk"
+    package "/developer/build-essential"
+    package "/developer/lang/rust"
+    package "/developer/versioning/git"
+}
+
+overlays {
+    shadow username="root" password="$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9"
+    file destination="/etc/default/init" source="default_init.utc" owner="root" group="root" mode="644"
+}
+
+target "qcow2" kind="qcow2" {
+    disk-size "4000M"
+    bootloader "uefi"
+    filesystem "zfs"
+    push-to "ghcr.io/cloudnebulaproject/omnios-rust:latest"
+    pool {
+        property name="ashift" value="12"
+    }
+}

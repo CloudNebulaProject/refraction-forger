@@ -3,11 +3,73 @@ use std::path::PathBuf;
 use miette::{Context, IntoDiagnostic};
 use tracing::info;
 
-/// Push an OCI Image Layout to a registry.
+/// Push an OCI Image Layout or QCOW2 artifact to a registry.
 pub async fn run(
     image_dir: &PathBuf,
     reference: &str,
     auth_file: Option<&PathBuf>,
+    artifact: bool,
+) -> miette::Result<()> {
+    let auth = resolve_auth(auth_file)?;
+
+    // Determine if we need insecure registries (localhost)
+    let insecure = if reference.starts_with("localhost") || reference.starts_with("127.0.0.1") {
+        let host_port = reference.split('/').next().unwrap_or("");
+        vec![host_port.to_string()]
+    } else {
+        vec![]
+    };
+
+    if artifact {
+        return push_artifact(image_dir, reference, &auth, &insecure).await;
+    }
+
+    push_oci_layout(image_dir, reference, &auth, &insecure).await
+}
+
+/// Push a QCOW2 file directly as an OCI artifact.
+async fn push_artifact(
+    qcow2_path: &PathBuf,
+    reference: &str,
+    auth: &forge_oci::registry::AuthConfig,
+    insecure: &[String],
+) -> miette::Result<()> {
+    info!(reference, path = %qcow2_path.display(), "Pushing QCOW2 artifact");
+
+    let qcow2_data = std::fs::read(qcow2_path)
+        .into_diagnostic()
+        .wrap_err_with(|| format!("Failed to read QCOW2 file: {}", qcow2_path.display()))?;
+
+    let name = qcow2_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image")
+        .to_string();
+
+    let metadata = forge_oci::artifact::Qcow2Metadata {
+        name,
+        version: "latest".to_string(),
+        architecture: "amd64".to_string(),
+        os: "linux".to_string(),
+        description: None,
+    };
+
+    let manifest_url =
+        forge_oci::artifact::push_qcow2_artifact(reference, qcow2_data, &metadata, auth, insecure)
+            .await
+            .map_err(miette::Report::new)
+            .wrap_err("Artifact push failed")?;
+
+    println!("Pushed artifact: {manifest_url}");
+    Ok(())
+}
+
+/// Push an OCI Image Layout to a registry.
+async fn push_oci_layout(
+    image_dir: &PathBuf,
+    reference: &str,
+    auth: &forge_oci::registry::AuthConfig,
+    insecure: &[String],
 ) -> miette::Result<()> {
     // Read the OCI Image Layout index.json
     let index_path = image_dir.join("index.json");
@@ -73,12 +135,25 @@ pub async fn run(
         layers.push(forge_oci::tar_layer::LayerBlob {
             data: layer_data,
             digest: layer_digest.to_string(),
-            uncompressed_size: 0, // Not tracked in layout
+            uncompressed_size: 0,
         });
     }
 
-    // Determine auth
-    let auth = if let Some(auth_path) = auth_file {
+    info!(reference, "Pushing OCI image to registry");
+
+    let manifest_url =
+        forge_oci::registry::push_image(reference, layers, config_json, auth, insecure)
+            .await
+            .map_err(miette::Report::new)
+            .wrap_err("Push failed")?;
+
+    println!("Pushed: {manifest_url}");
+    Ok(())
+}
+
+/// Resolve authentication from an auth file or environment.
+fn resolve_auth(auth_file: Option<&PathBuf>) -> miette::Result<forge_oci::registry::AuthConfig> {
+    if let Some(auth_path) = auth_file {
         let auth_content = std::fs::read_to_string(auth_path)
             .into_diagnostic()
             .wrap_err_with(|| format!("Failed to read auth file: {}", auth_path.display()))?;
@@ -87,40 +162,22 @@ pub async fn run(
             serde_json::from_str(&auth_content).into_diagnostic()?;
 
         if let Some(token) = auth_json["token"].as_str() {
-            forge_oci::registry::AuthConfig::Bearer {
+            Ok(forge_oci::registry::AuthConfig::Bearer {
                 token: token.to_string(),
-            }
+            })
         } else if let (Some(user), Some(pass)) = (
             auth_json["username"].as_str(),
             auth_json["password"].as_str(),
         ) {
-            forge_oci::registry::AuthConfig::Basic {
+            Ok(forge_oci::registry::AuthConfig::Basic {
                 username: user.to_string(),
                 password: pass.to_string(),
-            }
+            })
         } else {
-            forge_oci::registry::AuthConfig::Anonymous
+            Ok(forge_oci::registry::AuthConfig::Anonymous)
         }
     } else {
-        forge_oci::registry::AuthConfig::Anonymous
-    };
-
-    // Determine if we need insecure registries (localhost)
-    let insecure = if reference.starts_with("localhost") || reference.starts_with("127.0.0.1") {
-        let host_port = reference.split('/').next().unwrap_or("");
-        vec![host_port.to_string()]
-    } else {
-        vec![]
-    };
-
-    info!(reference, "Pushing OCI image to registry");
-
-    let manifest_url =
-        forge_oci::registry::push_image(reference, layers, config_json, &auth, &insecure)
-            .await
-            .map_err(miette::Report::new)
-            .wrap_err("Push failed")?;
-
-    println!("Pushed: {manifest_url}");
-    Ok(())
+        // Try GITHUB_TOKEN for ghcr.io
+        Ok(forge_oci::artifact::resolve_ghcr_auth())
+    }
 }
