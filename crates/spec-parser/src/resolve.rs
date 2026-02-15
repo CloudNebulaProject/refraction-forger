@@ -210,6 +210,11 @@ fn merge_base(mut base: ImageSpec, child: ImageSpec) -> ImageSpec {
         base.targets = child.targets;
     }
 
+    // builder: child's builder replaces base entirely
+    if child.builder.is_some() {
+        base.builder = child.builder;
+    }
+
     base
 }
 

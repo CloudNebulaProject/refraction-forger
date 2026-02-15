@@ -90,7 +90,7 @@ pub async fn build_qcow2_ext4(
                 "chroot",
                 &[
                     mount_str,
-                    "grub-install",
+                    "/usr/sbin/grub-install",
                     "--target=x86_64-efi",
                     "--efi-directory=/boot/efi",
                     "--no-nvram",
@@ -102,7 +102,7 @@ pub async fn build_qcow2_ext4(
         runner
             .run(
                 "chroot",
-                &[mount_str, "grub-mkconfig", "-o", "/boot/grub/grub.cfg"],
+                &[mount_str, "/usr/sbin/grub-mkconfig", "-o", "/boot/grub/grub.cfg"],
             )
             .await?;
 

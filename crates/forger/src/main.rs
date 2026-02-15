@@ -36,6 +36,14 @@ enum Commands {
         /// Output directory for build artifacts
         #[arg(short, long, default_value = "./output")]
         output_dir: PathBuf,
+
+        /// Force local build (skip builder VM detection)
+        #[arg(long)]
+        local: bool,
+
+        /// Force build inside a builder VM
+        #[arg(long, conflicts_with = "local")]
+        use_builder: bool,
     },
 
     /// Validate a spec file (parse + resolve includes)
@@ -99,8 +107,10 @@ async fn main() -> Result<()> {
             target,
             profile,
             output_dir,
+            local,
+            use_builder,
         } => {
-            commands::build::run(&spec, target.as_deref(), &profile, &output_dir).await?;
+            commands::build::run(&spec, target.as_deref(), &profile, &output_dir, local, use_builder).await?;
         }
         Commands::Validate { spec } => {
             commands::validate::run(&spec)?;

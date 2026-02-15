@@ -10,14 +10,18 @@ pub async fn debootstrap(
     suite: &str,
     root: &str,
     mirror: &str,
+    components: Option<&str>,
 ) -> Result<(), ForgeError> {
-    info!(suite, root, mirror, "Running debootstrap");
-    runner
-        .run(
-            "debootstrap",
-            &["--arch", "amd64", suite, root, mirror],
-        )
-        .await?;
+    info!(suite, root, mirror, ?components, "Running debootstrap");
+    let mut args = vec!["--arch", "amd64"];
+    // Format: --components=main,universe (comma-separated)
+    let comp_arg;
+    if let Some(c) = components {
+        comp_arg = format!("--components={}", c.replace(' ', ","));
+        args.push(&comp_arg);
+    }
+    args.extend_from_slice(&[suite, root, mirror]);
+    runner.run("debootstrap", &args).await?;
     Ok(())
 }
 
@@ -44,6 +48,22 @@ pub async fn install(
     let pkg_refs: Vec<&str> = packages.iter().map(|s| s.as_str()).collect();
     args.extend(pkg_refs);
     runner.run("chroot", &args).await?;
+    Ok(())
+}
+
+/// Write the primary sources.list in the chroot, replacing the debootstrap default.
+pub async fn write_sources_list(
+    root: &str,
+    entries: &[String],
+) -> Result<(), ForgeError> {
+    let sources_path = Path::new(root).join("etc/apt/sources.list");
+    info!(?sources_path, count = entries.len(), "Writing sources.list");
+    let content = entries.join("\n") + "\n";
+    std::fs::write(&sources_path, content).map_err(|e| ForgeError::Overlay {
+        action: "write sources.list".to_string(),
+        detail: sources_path.display().to_string(),
+        source: e,
+    })?;
     Ok(())
 }
 
@@ -112,7 +132,7 @@ mod tests {
     #[tokio::test]
     async fn test_debootstrap_args() {
         let runner = MockToolRunner::new();
-        debootstrap(&runner, "jammy", "/tmp/root", "http://archive.ubuntu.com/ubuntu")
+        debootstrap(&runner, "jammy", "/tmp/root", "http://archive.ubuntu.com/ubuntu", None)
             .await
             .unwrap();
 
@@ -122,6 +142,22 @@ mod tests {
         assert_eq!(
             calls[0].1,
             vec!["--arch", "amd64", "jammy", "/tmp/root", "http://archive.ubuntu.com/ubuntu"]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_debootstrap_with_components() {
+        let runner = MockToolRunner::new();
+        debootstrap(&runner, "jammy", "/tmp/root", "http://archive.ubuntu.com/ubuntu", Some("main universe"))
+            .await
+            .unwrap();
+
+        let calls = runner.calls();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].0, "debootstrap");
+        assert_eq!(
+            calls[0].1,
+            vec!["--arch", "amd64", "--components=main,universe", "jammy", "/tmp/root", "http://archive.ubuntu.com/ubuntu"]
         );
     }
 

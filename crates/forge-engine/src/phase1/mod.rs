@@ -119,15 +119,23 @@ async fn execute_apt(
     let mirror_url = first_mirror
         .map(|m| m.url.as_str())
         .unwrap_or("http://archive.ubuntu.com/ubuntu");
+    let components = first_mirror.and_then(|m| m.components.as_deref());
 
     // Bootstrap the rootfs
-    crate::tools::apt::debootstrap(runner, suite, root, mirror_url).await?;
+    crate::tools::apt::debootstrap(runner, suite, root, mirror_url, components).await?;
 
-    // Add any additional APT mirror sources (skip the first one used for debootstrap)
-    for mirror in spec.repositories.apt_mirrors.iter().skip(1) {
-        let components = mirror.components.as_deref().unwrap_or("main");
-        let entry = format!("deb {} {} {}", mirror.url, mirror.suite, components);
-        crate::tools::apt::add_source(runner, root, &entry).await?;
+    // Write sources.list with full component lists from all apt-mirror entries
+    let source_entries: Vec<String> = spec
+        .repositories
+        .apt_mirrors
+        .iter()
+        .map(|m| {
+            let components = m.components.as_deref().unwrap_or("main");
+            format!("deb {} {} {}", m.url, m.suite, components)
+        })
+        .collect();
+    if !source_entries.is_empty() {
+        crate::tools::apt::write_sources_list(root, &source_entries).await?;
     }
 
     // Update package lists

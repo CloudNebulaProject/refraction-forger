@@ -4,10 +4,15 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["builder"]
+builder = ["dep:forge-builder"]
+
 [dependencies]
 spec-parser = { workspace = true }
 forge-oci = { workspace = true }
 forge-engine = { workspace = true }
+forge-builder = { workspace = true, optional = true }
 clap = { workspace = true }
 miette = { workspace = true }
 thiserror = { workspace = true }

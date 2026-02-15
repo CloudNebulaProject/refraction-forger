@@ -11,6 +11,8 @@ pub async fn run(
     target: Option<&str>,
     profiles: &[String],
     output_dir: &PathBuf,
+    local: bool,
+    use_builder: bool,
 ) -> miette::Result<()> {
     let kdl_content = std::fs::read_to_string(spec_path)
         .into_diagnostic()
@@ -32,6 +34,35 @@ pub async fn run(
 
     // Determine files directory (images/files/ relative to spec)
     let files_dir = spec_dir.join("files");
+
+    // Check if we need a builder VM
+    #[cfg(feature = "builder")]
+    {
+        let needs = forge_builder::detect::needs_builder(&filtered, target, local);
+        if needs || use_builder {
+            info!("Delegating build to builder VM");
+            forge_builder::run_in_builder(
+                &filtered,
+                spec_path,
+                &files_dir,
+                output_dir,
+                target,
+                profiles,
+            )
+            .await
+            .map_err(miette::Report::new)
+            .wrap_err("Builder VM build failed")?;
+
+            println!("Build complete. Output: {}", output_dir.display());
+            return Ok(());
+        }
+    }
+
+    // Suppress unused variable warnings when builder feature is disabled
+    #[cfg(not(feature = "builder"))]
+    {
+        let _ = (local, use_builder);
+    }
 
     let runner = SystemToolRunner;
 

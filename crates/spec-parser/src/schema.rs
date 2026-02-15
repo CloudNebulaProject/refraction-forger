@@ -58,6 +58,22 @@ pub struct ImageSpec {
 
     #[knuffel(children(name = "target"))]
     pub targets: Vec<Target>,
+
+    #[knuffel(child)]
+    pub builder: Option<BuilderNode>,
+}
+
+/// Configuration for a builder VM used when the host can't build locally.
+#[derive(Debug, Decode)]
+pub struct BuilderNode {
+    #[knuffel(child, unwrap(argument))]
+    pub image: Option<String>,
+
+    #[knuffel(child, unwrap(argument))]
+    pub vcpus: Option<u16>,
+
+    #[knuffel(child, unwrap(argument))]
+    pub memory: Option<u64>,
 }
 
 #[derive(Debug, Decode)]

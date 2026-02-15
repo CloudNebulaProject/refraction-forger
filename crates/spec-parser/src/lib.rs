@@ -239,4 +239,67 @@ mod tests {
         assert_eq!(pool.properties[0].name, "ashift");
         assert_eq!(pool.properties[0].value, "12");
     }
+
+    #[test]
+    fn test_parse_builder_node_full() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+                image "oci://ghcr.io/custom/builder:v1"
+                vcpus 4
+                memory 4096
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        let builder = spec.builder.as_ref().unwrap();
+        assert_eq!(builder.image.as_deref(), Some("oci://ghcr.io/custom/builder:v1"));
+        assert_eq!(builder.vcpus, Some(4));
+        assert_eq!(builder.memory, Some(4096));
+    }
+
+    #[test]
+    fn test_parse_builder_node_partial() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+                vcpus 8
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        let builder = spec.builder.as_ref().unwrap();
+        assert_eq!(builder.image, None);
+        assert_eq!(builder.vcpus, Some(8));
+        assert_eq!(builder.memory, None);
+    }
+
+    #[test]
+    fn test_parse_builder_node_empty() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        let builder = spec.builder.as_ref().unwrap();
+        assert_eq!(builder.image, None);
+        assert_eq!(builder.vcpus, None);
+        assert_eq!(builder.memory, None);
+    }
+
+    #[test]
+    fn test_parse_no_builder_node() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        assert!(spec.builder.is_none());
+    }
 }

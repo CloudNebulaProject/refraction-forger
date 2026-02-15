@@ -1,0 +1,24 @@
+[package]
+name = "forge-builder"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+spec-parser = { workspace = true }
+vm-manager = { workspace = true }
+miette = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+ssh2 = { workspace = true }
+ssh-key = { workspace = true }
+libc = { workspace = true }
+dirs = { workspace = true }
+tempfile = { workspace = true }
+serde_json = { workspace = true }
+tar = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

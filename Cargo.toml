@@ -4,6 +4,7 @@ members = [
     "crates/spec-parser",
     "crates/forge-oci",
     "crates/forge-engine",
+    "crates/forge-builder",
     "crates/forger",
 ]
 
@@ -52,7 +53,16 @@ tempfile = "3"
 bytesize = "2"
 indicatif = "0.17"
 
+# Builder VM support
+vm-manager = { path = "../vm-manager/crates/vm-manager" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "stream"] }
+libc = "0.2"
+dirs = "6"
+ssh2 = "0.9"
+ssh-key = { version = "0.6", features = ["ed25519", "rand_core", "getrandom"] }
+
 # Internal crates
 spec-parser = { path = "crates/spec-parser" }
 forge-oci = { path = "crates/forge-oci" }
 forge-engine = { path = "crates/forge-engine" }
+forge-builder = { path = "crates/forge-builder" }
