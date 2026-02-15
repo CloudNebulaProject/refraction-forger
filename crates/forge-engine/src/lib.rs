@@ -23,6 +23,8 @@ pub struct BuildContext<'a> {
     pub output_dir: &'a Path,
     /// Tool runner for executing external commands.
     pub runner: &'a dyn ToolRunner,
+    /// Skip OCI registry push after build (host-side push handles it instead).
+    pub skip_push: bool,
 }
 
 impl<'a> BuildContext<'a> {
@@ -88,8 +90,10 @@ impl<'a> BuildContext<'a> {
         finalize_result?;
         cleanup_result?;
 
-        // Auto-push to OCI registry if configured
-        phase2::push_qcow2_if_configured(target, self.output_dir).await?;
+        // Auto-push to OCI registry if configured (skipped when host-side push handles it)
+        if !self.skip_push {
+            phase2::push_qcow2_if_configured(target, self.output_dir).await?;
+        }
 
         Ok(())
     }

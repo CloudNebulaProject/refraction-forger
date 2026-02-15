@@ -6,6 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 spec-parser = { workspace = true }
+forge-oci = { workspace = true }
 vm-manager = { workspace = true }
 miette = { workspace = true }
 thiserror = { workspace = true }

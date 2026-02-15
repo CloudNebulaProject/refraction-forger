@@ -715,6 +715,7 @@ name = "forge-builder"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "forge-oci",
  "libc",
  "miette 7.6.0",
  "reqwest",

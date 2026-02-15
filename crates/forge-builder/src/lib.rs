@@ -3,6 +3,7 @@ pub mod config;
 pub mod detect;
 pub mod error;
 pub mod lifecycle;
+pub mod push;
 pub mod transfer;
 
 use std::io::{stderr, stdout};
@@ -31,15 +32,23 @@ pub async fn run_in_builder(
     output_dir: &Path,
     target: Option<&str>,
     profiles: &[String],
+    builder_image: Option<&str>,
+    skip_push: bool,
 ) -> Result<(), BuilderError> {
     let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
-    let config = BuilderConfig::resolve(spec.builder.as_ref(), &distro);
+    let mut config = BuilderConfig::resolve(spec.builder.as_ref(), &distro);
+
+    // CLI --builder-image overrides the spec/default image
+    if let Some(img) = builder_image {
+        config.image = img.to_string();
+    }
+
     let binary = binary::resolve_forger_binary(&distro).await?;
 
     info!("Starting builder VM for remote build");
     let session = lifecycle::BuilderSession::start(&config).await?;
 
-    let result = run_build_in_session(&session, spec, &binary.path, spec_path, files_dir, output_dir, target, profiles).await;
+    let result = run_build_in_session(&session, spec, &binary.path, spec_path, files_dir, output_dir, target, profiles, skip_push).await;
 
     // On failure, try to collect diagnostic info before teardown
     if let Err(ref e) = result {
@@ -180,6 +189,7 @@ async fn run_build_in_session(
     output_dir: &Path,
     target: Option<&str>,
     profiles: &[String],
+    skip_push: bool,
 ) -> Result<(), BuilderError> {
     // Verify network connectivity (DNS) before doing anything
     verify_network(session)?;
@@ -190,9 +200,10 @@ async fn run_build_in_session(
     // Upload inputs
     transfer::upload_build_inputs(session, binary_path, spec_path, files_dir)?;
 
-    // Build the remote command
+    // Build the remote command — always pass --skip-push so the VM never attempts
+    // to push to the registry (it lacks GITHUB_TOKEN); the host handles pushing.
     let mut cmd = String::from(
-        "sudo /tmp/forger-build/forger build -s /tmp/forger-build/spec.kdl -o /tmp/forger-build/output/ --local",
+        "sudo /tmp/forger-build/forger build -s /tmp/forger-build/spec.kdl -o /tmp/forger-build/output/ --local --skip-push",
     );
 
     if let Some(t) = target {
@@ -230,5 +241,11 @@ async fn run_build_in_session(
     transfer::download_artifacts(session, output_dir)?;
 
     info!(output = %output_dir.display(), "Build artifacts downloaded successfully");
+
+    // Host-side push: push QCOW2 outputs from the host where GITHUB_TOKEN is available
+    if !skip_push {
+        push::push_qcow2_outputs(spec, output_dir).await?;
+    }
+
     Ok(())
 }

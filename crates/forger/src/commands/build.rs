@@ -13,6 +13,8 @@ pub async fn run(
     output_dir: &PathBuf,
     local: bool,
     use_builder: bool,
+    skip_push: bool,
+    builder_image: Option<&str>,
 ) -> miette::Result<()> {
     let kdl_content = std::fs::read_to_string(spec_path)
         .into_diagnostic()
@@ -48,6 +50,8 @@ pub async fn run(
                 output_dir,
                 target,
                 profiles,
+                builder_image,
+                skip_push,
             )
             .await
             .map_err(miette::Report::new)
@@ -61,7 +65,7 @@ pub async fn run(
     // Suppress unused variable warnings when builder feature is disabled
     #[cfg(not(feature = "builder"))]
     {
-        let _ = (local, use_builder);
+        let _ = (local, use_builder, builder_image);
     }
 
     let runner = SystemToolRunner;
@@ -71,6 +75,7 @@ pub async fn run(
         files_dir: &files_dir,
         output_dir,
         runner: &runner,
+        skip_push,
     };
 
     info!(

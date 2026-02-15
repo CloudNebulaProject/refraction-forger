@@ -22,6 +22,12 @@ overlays {
     file destination="/etc/default/init" source="default_init.utc" owner="root" group="root" mode="644"
 }
 
+builder {
+    image "https://downloads.omnios.org/media/bloody/omnios-bloody-cloud.raw.zst"
+    vcpus 4
+    memory 4096
+}
+
 target "qcow2" kind="qcow2" {
     disk-size "4000M"
     bootloader "uefi"

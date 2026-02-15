@@ -65,6 +65,13 @@ pub enum BuilderError {
     )]
     KeygenFailed { detail: String },
 
+    #[error("failed to push artifact to OCI registry: {detail}")]
+    #[diagnostic(
+        code(forge_builder::artifact_push_failed),
+        help("check that GITHUB_TOKEN is set and the registry reference is valid")
+    )]
+    ArtifactPushFailed { detail: String },
+
     #[error(transparent)]
     #[diagnostic(code(forge_builder::vm_error))]
     VmError(#[from] vm_manager::VmError),

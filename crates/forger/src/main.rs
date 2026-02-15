@@ -44,6 +44,14 @@ enum Commands {
         /// Force build inside a builder VM
         #[arg(long, conflicts_with = "local")]
         use_builder: bool,
+
+        /// Skip OCI registry push (host-side push used with builder VMs)
+        #[arg(long)]
+        skip_push: bool,
+
+        /// Override builder VM image (path, URL, or oci:// reference)
+        #[arg(long)]
+        builder_image: Option<String>,
     },
 
     /// Validate a spec file (parse + resolve includes)
@@ -109,8 +117,20 @@ async fn main() -> Result<()> {
             output_dir,
             local,
             use_builder,
+            skip_push,
+            builder_image,
         } => {
-            commands::build::run(&spec, target.as_deref(), &profile, &output_dir, local, use_builder).await?;
+            commands::build::run(
+                &spec,
+                target.as_deref(),
+                &profile,
+                &output_dir,
+                local,
+                use_builder,
+                skip_push,
+                builder_image.as_deref(),
+            )
+            .await?;
         }
         Commands::Validate { spec } => {
             commands::validate::run(&spec)?;
