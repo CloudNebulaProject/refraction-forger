@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use spec_parser::schema::Target;
 use tracing::info;
@@ -6,35 +6,45 @@ use tracing::info;
 use crate::error::ForgeError;
 use crate::tools::ToolRunner;
 
-/// Build a QCOW2 VM image from the staged rootfs.
+/// State for a prepared ZFS QCOW2 disk image, ready for Phase 1 population.
+#[derive(Debug)]
+pub struct PreparedZfs {
+    pub raw_path: PathBuf,
+    pub qcow2_path: PathBuf,
+    pub device: String,
+    pub pool_name: String,
+    pub be_dataset: String,
+    pub bootloader_type: String,
+    pub mount_dir: tempfile::TempDir,
+}
+
+impl PreparedZfs {
+    /// The path where the ZFS boot-environment dataset is mounted;
+    /// Phase 1 populates into this.
+    pub fn root_mount(&self) -> &Path {
+        self.mount_dir.path()
+    }
+}
+
+/// Phase 2 prepare: create raw disk, attach loopback, create ZFS pool + BE, mount.
 ///
-/// Pipeline:
-/// 1. Create raw disk image of specified size
-/// 2. Attach loopback device
-/// 3. Create ZFS pool with spec properties
-/// 4. Create boot environment structure (rpool/ROOT/be-1)
-/// 5. Copy staging rootfs into mounted BE
-/// 6. Install bootloader via chroot
-/// 7. Set bootfs property
-/// 8. Export pool, detach loopback
-/// 9. Convert raw -> qcow2
-pub async fn build_qcow2_zfs(
+/// Returns a `PreparedZfs` whose `root_mount()` is the mounted BE dataset —
+/// Phase 1 should populate the rootfs directly into that directory.
+pub async fn prepare_zfs(
     target: &Target,
-    staging_root: &Path,
     output_dir: &Path,
     runner: &dyn ToolRunner,
-) -> Result<(), ForgeError> {
+) -> Result<PreparedZfs, ForgeError> {
     let disk_size = target
         .disk_size
         .as_deref()
         .ok_or(ForgeError::MissingDiskSize)?;
 
-    let bootloader_type = target.bootloader.as_deref().unwrap_or("uefi");
+    let bootloader_type = target.bootloader.as_deref().unwrap_or("uefi").to_string();
 
     let raw_path = output_dir.join(format!("{}.raw", target.name));
     let qcow2_path = output_dir.join(format!("{}.qcow2", target.name));
     let raw_str = raw_path.to_str().unwrap();
-    let qcow2_str = qcow2_path.to_str().unwrap();
 
     // Collect pool properties
     let pool_props: Vec<(&str, &str)> = target
@@ -48,7 +58,7 @@ pub async fn build_qcow2_zfs(
         })
         .unwrap_or_default();
 
-    let pool_name = "rpool";
+    let pool_name = "rpool".to_string();
     let be_dataset = format!("{pool_name}/ROOT/be-1");
 
     info!(disk_size, "Step 1: Creating raw disk image");
@@ -57,93 +67,95 @@ pub async fn build_qcow2_zfs(
     info!("Step 2: Attaching loopback device");
     let device = crate::tools::loopback::attach(runner, raw_str).await?;
 
-    // Wrap the rest in a closure-like structure so we can clean up on error
-    let result = async {
-        info!(device = %device, "Step 3: Creating ZFS pool");
-        crate::tools::zpool::create(runner, pool_name, &device, &pool_props).await?;
+    info!(device = %device, "Step 3: Creating ZFS pool");
+    crate::tools::zpool::create(runner, &pool_name, &device, &pool_props).await?;
 
-        info!("Step 4: Creating boot environment structure");
-        crate::tools::zfs::create(
-            runner,
-            &format!("{pool_name}/ROOT"),
-            &[("canmount", "off"), ("mountpoint", "legacy")],
-        )
-        .await?;
+    info!("Step 4: Creating boot environment structure");
+    crate::tools::zfs::create(
+        runner,
+        &format!("{pool_name}/ROOT"),
+        &[("canmount", "off"), ("mountpoint", "legacy")],
+    )
+    .await?;
 
-        let staging_str = staging_root.to_str().unwrap_or(".");
-        crate::tools::zfs::create(
-            runner,
-            &be_dataset,
-            &[("canmount", "noauto"), ("mountpoint", staging_str)],
-        )
-        .await?;
+    // Mount the BE dataset at a fresh tempdir — not the Phase 1 staging root.
+    let mount_dir = tempfile::tempdir().map_err(ForgeError::StagingSetup)?;
+    let mount_str = mount_dir.path().to_str().unwrap();
 
-        crate::tools::zfs::mount(runner, &be_dataset).await?;
+    crate::tools::zfs::create(
+        runner,
+        &be_dataset,
+        &[("canmount", "noauto"), ("mountpoint", mount_str)],
+    )
+    .await?;
 
-        info!("Step 5: Copying staging rootfs into boot environment");
-        copy_rootfs(staging_root, staging_root)?;
+    crate::tools::zfs::mount(runner, &be_dataset).await?;
 
-        info!("Step 6: Installing bootloader");
-        crate::tools::bootloader::install(runner, staging_str, pool_name, bootloader_type).await?;
+    info!("Step 5: ZFS BE mounted at {}", mount_str);
 
-        info!("Step 7: Setting bootfs property");
-        crate::tools::zpool::set(runner, pool_name, "bootfs", &be_dataset).await?;
+    Ok(PreparedZfs {
+        raw_path,
+        qcow2_path,
+        device,
+        pool_name,
+        be_dataset,
+        bootloader_type,
+        mount_dir,
+    })
+}
 
-        info!("Step 8: Exporting ZFS pool");
-        crate::tools::zfs::unmount(runner, &be_dataset).await?;
-        crate::tools::zpool::export(runner, pool_name).await?;
+/// Phase 2 finalize: install bootloader, set bootfs, unmount + export pool.
+pub async fn finalize_zfs(
+    prepared: &PreparedZfs,
+    runner: &dyn ToolRunner,
+) -> Result<(), ForgeError> {
+    let mount_str = prepared.mount_dir.path().to_str().unwrap();
 
-        Ok::<(), ForgeError>(())
-    }
-    .await;
+    info!("Finalize step 1: Installing bootloader");
+    crate::tools::bootloader::install(
+        runner,
+        mount_str,
+        &prepared.pool_name,
+        &prepared.bootloader_type,
+    )
+    .await?;
 
-    // Always try to detach loopback, even on error
-    info!("Detaching loopback device");
-    let detach_result = crate::tools::loopback::detach(runner, &device).await;
+    info!("Finalize step 2: Setting bootfs property");
+    crate::tools::zpool::set(runner, &prepared.pool_name, "bootfs", &prepared.be_dataset).await?;
 
-    // Return the original error if there was one
-    result?;
-    detach_result?;
+    info!("Finalize step 3: Unmounting and exporting ZFS pool");
+    crate::tools::zfs::unmount(runner, &prepared.be_dataset).await?;
+    crate::tools::zpool::export(runner, &prepared.pool_name).await?;
 
-    info!("Step 9: Converting raw -> qcow2");
-    crate::tools::qemu_img::convert_to_qcow2(runner, raw_str, qcow2_str).await?;
-
-    // Clean up raw file
-    std::fs::remove_file(&raw_path).ok();
-
-    info!(path = %qcow2_path.display(), "QCOW2 image created");
     Ok(())
 }
 
-/// Copy the staging rootfs into the mounted BE.
-/// Since the BE is mounted at the staging root mountpoint, we use a recursive
-/// copy approach for files that need relocation.
-fn copy_rootfs(src: &Path, dest: &Path) -> Result<(), ForgeError> {
-    // In the actual build, the ZFS dataset is mounted at the staging_root path,
-    // so the files are already in place after package installation. This function
-    // handles the case where we need to copy from a temp staging dir into the
-    // mounted ZFS dataset.
-    if src == dest {
-        return Ok(());
+/// Cleanup: detach loopback, convert raw→qcow2 (if `convert` is true), remove raw file.
+///
+/// Always runs, even if earlier phases failed — the loopback device must be detached.
+pub async fn cleanup_zfs(
+    prepared: PreparedZfs,
+    convert: bool,
+    runner: &dyn ToolRunner,
+) -> Result<(), ForgeError> {
+    info!("Cleanup: detaching loopback device");
+    let detach_result = crate::tools::loopback::detach(runner, &prepared.device).await;
+
+    if convert {
+        let raw_str = prepared.raw_path.to_str().unwrap();
+        let qcow2_str = prepared.qcow2_path.to_str().unwrap();
+
+        info!("Cleanup: converting raw -> qcow2");
+        crate::tools::qemu_img::convert_to_qcow2(runner, raw_str, qcow2_str).await?;
     }
 
-    for entry in walkdir::WalkDir::new(src).follow_links(false) {
-        let entry = entry.map_err(|e| ForgeError::Qcow2Build {
-            step: "copy_rootfs".to_string(),
-            detail: e.to_string(),
-        })?;
+    // Clean up raw file
+    std::fs::remove_file(&prepared.raw_path).ok();
 
-        let rel = entry.path().strip_prefix(src).unwrap_or(entry.path());
-        let target = dest.join(rel);
+    detach_result?;
 
-        if entry.path().is_dir() {
-            std::fs::create_dir_all(&target)?;
-        } else if entry.path().is_file() {
-            if let Some(parent) = target.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            std::fs::copy(entry.path(), &target)?;
-        }
+    if convert {
+        info!(path = %prepared.qcow2_path.display(), "QCOW2 (ZFS) image created");
     }
 
     Ok(())

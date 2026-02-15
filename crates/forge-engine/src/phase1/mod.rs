@@ -21,45 +21,57 @@ pub struct Phase1Result {
     pub _staging_dir: tempfile::TempDir,
 }
 
-/// Execute Phase 1: assemble a rootfs in a staging directory from the spec.
+/// Populate a rootfs into an existing directory (for QCOW2 targets that mount
+/// the target filesystem first).
+pub async fn execute_into(
+    spec: &ImageSpec,
+    files_dir: &Path,
+    runner: &dyn ToolRunner,
+    root: &Path,
+) -> Result<(), ForgeError> {
+    let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
+    info!(name = %spec.metadata.name, ?distro, "Starting Phase 1: rootfs assembly");
+
+    let root_str = root.to_str().unwrap();
+    info!(root = root_str, "Populating rootfs");
+
+    // 1. Extract base tarball
+    if let Some(ref base) = spec.base {
+        staging::extract_base_tarball(base, &root.to_path_buf())?;
+    }
+
+    // 2. Distro-specific package management
+    match distro {
+        DistroFamily::OmniOS => execute_ips(spec, root_str, files_dir, runner).await?,
+        DistroFamily::Ubuntu => execute_apt(spec, root_str, runner).await?,
+    }
+
+    // 3. Apply customizations (common)
+    for customization in &spec.customizations {
+        customizations::apply(customization, root)?;
+    }
+
+    // 4. Apply overlays (common)
+    for overlay_block in &spec.overlays {
+        overlays::apply_overlays(&overlay_block.actions, root, files_dir, runner).await?;
+    }
+
+    info!("Phase 1 complete: rootfs assembled");
+    Ok(())
+}
+
+/// Execute Phase 1: create a staging directory and assemble a rootfs from the spec.
 ///
-/// Dispatches to the appropriate distro-specific path based on the `distro` field,
-/// then applies common customizations and overlays.
+/// For OCI/Artifact targets that manage their own staging directory.
+/// Delegates to `execute_into()` after creating the tempdir.
 pub async fn execute(
     spec: &ImageSpec,
     files_dir: &Path,
     runner: &dyn ToolRunner,
 ) -> Result<Phase1Result, ForgeError> {
-    let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
-    info!(name = %spec.metadata.name, ?distro, "Starting Phase 1: rootfs assembly");
-
-    // 1. Create staging directory
     let (staging_dir, staging_root) = staging::create_staging()?;
-    let root = staging_root.to_str().unwrap();
-    info!(root, "Staging directory created");
 
-    // 2. Extract base tarball
-    if let Some(ref base) = spec.base {
-        staging::extract_base_tarball(base, &staging_root)?;
-    }
-
-    // 3. Distro-specific package management
-    match distro {
-        DistroFamily::OmniOS => execute_ips(spec, root, files_dir, runner).await?,
-        DistroFamily::Ubuntu => execute_apt(spec, root, runner).await?,
-    }
-
-    // 4. Apply customizations (common)
-    for customization in &spec.customizations {
-        customizations::apply(customization, &staging_root)?;
-    }
-
-    // 5. Apply overlays (common)
-    for overlay_block in &spec.overlays {
-        overlays::apply_overlays(&overlay_block.actions, &staging_root, files_dir, runner).await?;
-    }
-
-    info!("Phase 1 complete: rootfs assembled");
+    execute_into(spec, files_dir, runner, &staging_root).await?;
 
     Ok(Phase1Result {
         staging_root,
