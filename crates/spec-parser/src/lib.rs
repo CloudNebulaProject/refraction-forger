@@ -249,6 +249,7 @@ mod tests {
                 image "oci://ghcr.io/custom/builder:v1"
                 vcpus 4
                 memory 4096
+                disk 50
             }
         "#;
 
@@ -257,6 +258,7 @@ mod tests {
         assert_eq!(builder.image.as_deref(), Some("oci://ghcr.io/custom/builder:v1"));
         assert_eq!(builder.vcpus, Some(4));
         assert_eq!(builder.memory, Some(4096));
+        assert_eq!(builder.disk, Some(50));
     }
 
     #[test]
@@ -290,6 +292,7 @@ mod tests {
         assert_eq!(builder.image, None);
         assert_eq!(builder.vcpus, None);
         assert_eq!(builder.memory, None);
+        assert_eq!(builder.disk, None);
     }
 
     #[test]

@@ -30,6 +30,11 @@ overlays {
     ensure-dir "/home/ci" owner="ci" group="ci" mode="755"
 }
 
+builder {
+    vcpus 4
+    memory 4096
+}
+
 target "qcow2" kind="qcow2" {
     disk-size "8G"
     bootloader "grub"

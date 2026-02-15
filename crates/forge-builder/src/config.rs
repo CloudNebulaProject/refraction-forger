@@ -9,6 +9,8 @@ pub struct BuilderConfig {
     pub vcpus: u16,
     /// Memory in MB for the builder VM.
     pub memory_mb: u64,
+    /// Disk size in GB for the builder VM overlay.
+    pub disk_gb: u32,
 }
 
 impl BuilderConfig {
@@ -22,11 +24,13 @@ impl BuilderConfig {
                 image: node.image.clone().unwrap_or(default_image),
                 vcpus: node.vcpus.unwrap_or(2),
                 memory_mb: node.memory.unwrap_or(2048),
+                disk_gb: node.disk.unwrap_or(20),
             },
             None => Self {
                 image: default_image,
                 vcpus: 2,
                 memory_mb: 2048,
+                disk_gb: 20,
             },
         }
     }
@@ -53,12 +57,14 @@ mod tests {
         assert!(config.image.contains("ubuntu-builder"));
         assert_eq!(config.vcpus, 2);
         assert_eq!(config.memory_mb, 2048);
+        assert_eq!(config.disk_gb, 20);
     }
 
     #[test]
     fn defaults_for_omnios() {
         let config = BuilderConfig::resolve(None, &DistroFamily::OmniOS);
         assert!(config.image.contains("omnios-builder"));
+        assert_eq!(config.disk_gb, 20);
     }
 
     #[test]
@@ -67,11 +73,13 @@ mod tests {
             image: Some("oci://custom/image:v1".to_string()),
             vcpus: Some(4),
             memory: Some(4096),
+            disk: Some(50),
         };
         let config = BuilderConfig::resolve(Some(&node), &DistroFamily::Ubuntu);
         assert_eq!(config.image, "oci://custom/image:v1");
         assert_eq!(config.vcpus, 4);
         assert_eq!(config.memory_mb, 4096);
+        assert_eq!(config.disk_gb, 50);
     }
 
     #[test]
@@ -80,10 +88,12 @@ mod tests {
             image: None,
             vcpus: Some(8),
             memory: None,
+            disk: None,
         };
         let config = BuilderConfig::resolve(Some(&node), &DistroFamily::Ubuntu);
         assert!(config.image.contains("ubuntu-builder"));
         assert_eq!(config.vcpus, 8);
         assert_eq!(config.memory_mb, 2048);
+        assert_eq!(config.disk_gb, 20);
     }
 }

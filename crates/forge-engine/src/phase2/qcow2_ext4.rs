@@ -65,7 +65,7 @@ pub async fn build_qcow2_ext4(
         crate::tools::partition::mount(runner, &root_part, mount_str).await?;
 
         // Copy staging rootfs into mounted root
-        copy_rootfs(staging_root, mount_dir.path())?;
+        copy_rootfs(staging_root, mount_dir.path(), runner).await?;
 
         info!("Step 6: Mounting EFI partition");
         let efi_mount = mount_dir.path().join("boot/efi");
@@ -136,25 +136,25 @@ pub async fn build_qcow2_ext4(
 }
 
 /// Copy the staging rootfs into the mounted root partition.
-fn copy_rootfs(src: &Path, dest: &Path) -> Result<(), ForgeError> {
-    for entry in walkdir::WalkDir::new(src).follow_links(false) {
-        let entry = entry.map_err(|e| ForgeError::Qcow2Build {
+///
+/// Uses `cp -a` (archive mode) to properly preserve symlinks, permissions,
+/// ownership, timestamps, and special files. This is critical for modern
+/// distros with merged /usr where /lib, /bin, /sbin are symlinks.
+async fn copy_rootfs(
+    src: &Path,
+    dest: &Path,
+    runner: &dyn ToolRunner,
+) -> Result<(), ForgeError> {
+    let src_str = format!("{}/.", src.display());
+    let dest_str = dest.to_str().unwrap();
+
+    runner
+        .run("cp", &["-a", &src_str, dest_str])
+        .await
+        .map_err(|_| ForgeError::Qcow2Build {
             step: "copy_rootfs".to_string(),
-            detail: e.to_string(),
+            detail: format!("cp -a {}/. -> {}", src.display(), dest.display()),
         })?;
-
-        let rel = entry.path().strip_prefix(src).unwrap_or(entry.path());
-        let target = dest.join(rel);
-
-        if entry.path().is_dir() {
-            std::fs::create_dir_all(&target)?;
-        } else if entry.path().is_file() {
-            if let Some(parent) = target.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            std::fs::copy(entry.path(), &target)?;
-        }
-    }
 
     Ok(())
 }

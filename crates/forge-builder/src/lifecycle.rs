@@ -23,7 +23,7 @@ pub struct BuilderSession {
 impl BuilderSession {
     /// Start a builder VM: resolve image, generate SSH keys, create + boot VM, connect SSH.
     pub async fn start(config: &BuilderConfig) -> Result<Self, BuilderError> {
-        info!(image = %config.image, vcpus = config.vcpus, memory_mb = config.memory_mb, "Starting builder VM");
+        info!(image = %config.image, vcpus = config.vcpus, memory_mb = config.memory_mb, disk_gb = config.disk_gb, "Starting builder VM");
 
         // 1. Resolve builder image
         let image_path = resolve_builder_image(&config.image).await?;
@@ -31,7 +31,9 @@ impl BuilderSession {
         // 2. Generate ephemeral SSH keypair
         let (pub_key, priv_pem) = generate_ssh_keypair()?;
 
-        // 3. Build cloud-config with builder user + injected pubkey
+        // 3. Build cloud-config with builder user + injected pubkey + disk growth
+        // growpart + resize_rootfs ensure the root partition expands to fill the
+        // resized overlay disk (cloud images ship with tiny 2GB roots).
         let cloud_config = format!(
             r#"#cloud-config
 users:
@@ -40,6 +42,13 @@ users:
     shell: /bin/bash
     ssh_authorized_keys:
       - {pub_key}
+
+growpart:
+  mode: auto
+  devices:
+    - /
+
+resize_rootfs: true
 "#
         );
 
@@ -57,7 +66,7 @@ users:
             image_path: image_path.clone(),
             vcpus: config.vcpus,
             memory_mb: config.memory_mb,
-            disk_gb: None,
+            disk_gb: Some(config.disk_gb),
             network: NetworkConfig::User,
             cloud_init: Some(CloudInitConfig {
                 user_data: cloud_config.into_bytes(),

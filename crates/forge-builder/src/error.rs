@@ -47,9 +47,9 @@ pub enum BuilderError {
     #[error("remote build inside builder VM failed with exit code {exit_code}")]
     #[diagnostic(
         code(forge_builder::remote_build_failed),
-        help("check the build output above for errors — the forger build ran inside the builder VM")
+        help("check the build output above for errors — the forger build ran inside the builder VM\n{detail}")
     )]
-    RemoteBuildFailed { exit_code: i32 },
+    RemoteBuildFailed { exit_code: i32, detail: String },
 
     #[error("failed to download build artifacts from builder VM: {detail}")]
     #[diagnostic(

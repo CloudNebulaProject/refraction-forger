@@ -74,6 +74,9 @@ pub struct BuilderNode {
 
     #[knuffel(child, unwrap(argument))]
     pub memory: Option<u64>,
+
+    #[knuffel(child, unwrap(argument))]
+    pub disk: Option<u32>,
 }
 
 #[derive(Debug, Decode)]
