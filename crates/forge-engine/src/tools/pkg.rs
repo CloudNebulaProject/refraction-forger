@@ -5,7 +5,7 @@ use tracing::info;
 /// Create a new IPS image at the given root path.
 pub async fn image_create(runner: &dyn ToolRunner, root: &str) -> Result<(), ForgeError> {
     info!(root, "Creating IPS image");
-    runner.run("pkg", &["image-create", "-F", "-p", root]).await?;
+    runner.run("pkg", &["image-create", "-F", root]).await?;
     Ok(())
 }
 
@@ -41,6 +41,8 @@ pub async fn install(
 }
 
 /// Change an IPS variant in the image at the given root.
+///
+/// Exit code 4 from `pkg` means "nothing to do" (already set) — treated as success.
 pub async fn change_variant(
     runner: &dyn ToolRunner,
     root: &str,
@@ -49,10 +51,17 @@ pub async fn change_variant(
 ) -> Result<(), ForgeError> {
     info!(root, name, value, "Changing variant");
     let variant_arg = format!("{name}={value}");
-    runner
+    match runner
         .run("pkg", &["-R", root, "change-variant", &variant_arg])
-        .await?;
-    Ok(())
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(ForgeError::ToolNonZero { exit_code: 4, .. }) => {
+            info!(name, value, "Variant already set — nothing to do");
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
 }
 
 /// Approve a CA certificate for a publisher in the IPS image.

@@ -17,6 +17,7 @@ packages {
     package "libssl-dev"
     package "openssh-server"
     package "cloud-init"
+    package "cloud-guest-utils"
     package "grub-efi-amd64"
     package "linux-image-generic"
 }

@@ -1,0 +1,7 @@
+[build.env]
+volumes = ["VM_MANAGER_DIR=/home/toasty/ws/nebula/vm-manager"]
+
+[target.x86_64-unknown-illumos]
+pre-build = [
+    "ln -sf /usr/local/x86_64-unknown-illumos/bin/x86_64-unknown-illumos-ranlib /usr/local/bin/granlib",
+]

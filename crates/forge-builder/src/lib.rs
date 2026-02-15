@@ -133,8 +133,10 @@ fn install_build_deps(
              debootstrap qemu-utils parted dosfstools e2fsprogs grub-efi-amd64-bin mount"
         }
         DistroFamily::OmniOS => {
-            // OmniOS builder images should already have pkg tools; install qemu-img if missing
-            "sudo pkg install -q system/qemu/img || true"
+            // OmniOS bloody: add the extra publisher for qemu-img utility
+            "sudo pkg set-publisher -g https://pkg.omnios.org/bloody/extra extra.omnios 2>/dev/null; \
+             sudo pkg refresh --full 2>/dev/null; \
+             sudo pkg install -q ooce/util/qemu-img || true"
         }
     };
 
@@ -203,7 +205,7 @@ async fn run_build_in_session(
     // Build the remote command — always pass --skip-push so the VM never attempts
     // to push to the registry (it lacks GITHUB_TOKEN); the host handles pushing.
     let mut cmd = String::from(
-        "sudo /tmp/forger-build/forger build -s /tmp/forger-build/spec.kdl -o /tmp/forger-build/output/ --local --skip-push",
+        "sudo /var/tmp/forger-build/forger build -s /var/tmp/forger-build/spec.kdl -o /var/tmp/forger-build/output/ --local --skip-push",
     );
 
     if let Some(t) = target {

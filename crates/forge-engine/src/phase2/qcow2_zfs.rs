@@ -12,7 +12,10 @@ pub struct PreparedZfs {
     pub raw_path: PathBuf,
     pub qcow2_path: PathBuf,
     pub device: String,
+    /// Build-time pool name (unique to avoid collision with host's rpool).
     pub pool_name: String,
+    /// Final pool name for the output image (typically "rpool").
+    pub final_pool_name: String,
     pub be_dataset: String,
     pub bootloader_type: String,
     pub mount_dir: tempfile::TempDir,
@@ -58,7 +61,16 @@ pub async fn prepare_zfs(
         })
         .unwrap_or_default();
 
-    let pool_name = "rpool".to_string();
+    // Use a unique build-time pool name to avoid collisions when building
+    // inside a VM that already has its own "rpool" (e.g. OmniOS builder VMs).
+    // The pool is renamed to the final name after export.
+    let final_pool_name = "rpool".to_string();
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .subsec_nanos();
+    let build_id = format!("{:08x}", nanos ^ std::process::id());
+    let pool_name = format!("forgebuild_{build_id}");
     let be_dataset = format!("{pool_name}/ROOT/be-1");
 
     info!(disk_size, "Step 1: Creating raw disk image");
@@ -98,13 +110,15 @@ pub async fn prepare_zfs(
         qcow2_path,
         device,
         pool_name,
+        final_pool_name,
         be_dataset,
         bootloader_type,
         mount_dir,
     })
 }
 
-/// Phase 2 finalize: install bootloader, set bootfs, unmount + export pool.
+/// Phase 2 finalize: install bootloader, set bootfs, unmount + export pool,
+/// then rename the build-time pool to the final name (e.g. "rpool").
 pub async fn finalize_zfs(
     prepared: &PreparedZfs,
     runner: &dyn ToolRunner,
@@ -126,6 +140,41 @@ pub async fn finalize_zfs(
     info!("Finalize step 3: Unmounting and exporting ZFS pool");
     crate::tools::zfs::unmount(runner, &prepared.be_dataset).await?;
     crate::tools::zpool::export(runner, &prepared.pool_name).await?;
+
+    // Rename the pool from the build-time name to the final name.
+    // The pool is exported and the loopback device is still attached,
+    // so we can reimport with the new name.
+    //
+    // This will fail inside builder VMs that have their own "rpool" active
+    // (e.g. OmniOS builders) — in that case the image keeps the build-time
+    // pool name and can be renamed at deployment with:
+    //   zpool import <build_name> rpool
+    if prepared.pool_name != prepared.final_pool_name {
+        info!(
+            build_name = %prepared.pool_name,
+            final_name = %prepared.final_pool_name,
+            "Finalize step 4: Renaming pool to final name"
+        );
+        match crate::tools::zpool::rename_exported(
+            runner,
+            &prepared.device,
+            &prepared.pool_name,
+            &prepared.final_pool_name,
+        )
+        .await
+        {
+            Ok(()) => info!("Pool renamed to '{}'", prepared.final_pool_name),
+            Err(e) => tracing::warn!(
+                error = %e,
+                build_name = %prepared.pool_name,
+                "Pool rename failed (host likely has active '{pool}') — \
+                 image pool is named '{build}'; rename at deployment with: \
+                 zpool import {build} {pool}",
+                pool = prepared.final_pool_name,
+                build = prepared.pool_name,
+            ),
+        }
+    }
 
     Ok(())
 }

@@ -13,7 +13,7 @@ packages {
     package "/driver/network/vioif"
     package "/driver/storage/vioblk"
     package "/developer/build-essential"
-    package "/developer/lang/rust"
+    package "ooce/developer/rust"
     package "/developer/versioning/git"
 }
 
@@ -23,13 +23,13 @@ overlays {
 }
 
 builder {
-    image "https://downloads.omnios.org/media/bloody/omnios-bloody-cloud.raw.zst"
+    image "https://downloads.omnios.org/media/bloody/omnios-bloody-20251111.cloud.raw.zst"
     vcpus 4
     memory 4096
 }
 
 target "qcow2" kind="qcow2" {
-    disk-size "4000M"
+    disk-size "8G"
     bootloader "uefi"
     filesystem "zfs"
     push-to "ghcr.io/cloudnebulaproject/omnios-rust:latest"

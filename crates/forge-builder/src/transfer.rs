@@ -7,7 +7,7 @@ use vm_manager::ssh;
 use crate::error::BuilderError;
 use crate::lifecycle::BuilderSession;
 
-const REMOTE_BUILD_DIR: &str = "/tmp/forger-build";
+const REMOTE_BUILD_DIR: &str = "/var/tmp/forger-build";
 
 /// Upload all build inputs to the builder VM.
 pub fn upload_build_inputs(
@@ -46,6 +46,26 @@ pub fn upload_build_inputs(
     ssh::upload(sess, spec_path, &remote_spec).map_err(|e| BuilderError::TransferFailed {
         detail: format!("upload spec: {e}"),
     })?;
+
+    // Upload sibling .kdl files (base/include references resolved relative to spec dir)
+    if let Some(spec_dir) = spec_path.parent() {
+        if let Ok(entries) = std::fs::read_dir(spec_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|e| e == "kdl") && path != spec_path {
+                    let filename = path.file_name().unwrap();
+                    let remote_path =
+                        PathBuf::from(format!("{REMOTE_BUILD_DIR}/{}", filename.to_string_lossy()));
+                    info!(file = %filename.to_string_lossy(), "Uploading include file");
+                    ssh::upload(sess, &path, &remote_path).map_err(|e| {
+                        BuilderError::TransferFailed {
+                            detail: format!("upload include {}: {e}", filename.to_string_lossy()),
+                        }
+                    })?;
+                }
+            }
+        }
+    }
 
     // Upload files/ directory if it exists (tar locally → upload → extract remotely)
     if files_dir.exists() && files_dir.is_dir() {
@@ -109,10 +129,11 @@ pub fn download_artifacts(
     let sess = &session.ssh_session;
     let remote_output = format!("{REMOTE_BUILD_DIR}/output");
 
-    // List files in remote output directory
+    // List files in remote output directory (use ls -1 for portability; GNU
+    // find -printf is not available on illumos)
     let (stdout, _, exit_code) = ssh::exec(
         sess,
-        &format!("find {remote_output} -maxdepth 1 -type f -printf '%f\\n'"),
+        &format!("ls -1 {remote_output}/ 2>/dev/null"),
     )
     .map_err(|e| BuilderError::DownloadFailed {
         detail: format!("list remote files: {e}"),
