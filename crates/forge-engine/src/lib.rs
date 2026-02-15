@@ -1,3 +1,6 @@
+// thiserror/miette derive macros generate code that triggers false-positive unused_assignments
+#![allow(unused_assignments)]
+
 pub mod error;
 pub mod phase1;
 pub mod phase2;

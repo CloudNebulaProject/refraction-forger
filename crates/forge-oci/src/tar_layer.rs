@@ -124,3 +124,95 @@ pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
         uncompressed_size,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_create_layer_empty_dir() {
+        let tmp = TempDir::new().unwrap();
+        let layer = create_layer(tmp.path()).unwrap();
+
+        assert!(layer.data.len() > 0);
+        assert!(layer.digest.starts_with("sha256:"));
+        assert_eq!(layer.uncompressed_size, 0);
+    }
+
+    #[test]
+    fn test_create_layer_with_file() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("hello.txt"), "Hello, world!").unwrap();
+
+        let layer = create_layer(tmp.path()).unwrap();
+
+        assert!(layer.digest.starts_with("sha256:"));
+        assert_eq!(layer.uncompressed_size, 13); // "Hello, world!" = 13 bytes
+        assert!(layer.data.len() > 0);
+
+        // Verify we can decompress the gzip layer
+        let decoder = flate2::read::GzDecoder::new(layer.data.as_slice());
+        let mut archive = tar::Archive::new(decoder);
+        let entries: Vec<_> = archive.entries().unwrap().collect();
+        assert_eq!(entries.len(), 1);
+    }
+
+    #[test]
+    fn test_create_layer_with_nested_dirs() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join("etc/ssh")).unwrap();
+        fs::write(tmp.path().join("etc/ssh/sshd_config"), "Port 22\n").unwrap();
+        fs::write(tmp.path().join("etc/hostname"), "test\n").unwrap();
+
+        let layer = create_layer(tmp.path()).unwrap();
+
+        // Decompress and verify structure
+        let decoder = flate2::read::GzDecoder::new(layer.data.as_slice());
+        let mut archive = tar::Archive::new(decoder);
+        let paths: Vec<String> = archive
+            .entries()
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path().unwrap().display().to_string())
+            .collect();
+
+        assert!(paths.contains(&"etc".to_string()));
+        assert!(paths.contains(&"etc/ssh".to_string()));
+        assert!(paths.contains(&"etc/ssh/sshd_config".to_string()));
+        assert!(paths.contains(&"etc/hostname".to_string()));
+    }
+
+    #[test]
+    fn test_create_layer_with_symlink() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("target.txt"), "data").unwrap();
+        std::os::unix::fs::symlink("target.txt", tmp.path().join("link.txt")).unwrap();
+
+        let layer = create_layer(tmp.path()).unwrap();
+
+        let decoder = flate2::read::GzDecoder::new(layer.data.as_slice());
+        let mut archive = tar::Archive::new(decoder);
+        let mut found_symlink = false;
+        for entry in archive.entries().unwrap() {
+            let entry = entry.unwrap();
+            if entry.path().unwrap().display().to_string() == "link.txt" {
+                assert_eq!(entry.header().entry_type(), tar::EntryType::Symlink);
+                found_symlink = true;
+            }
+        }
+        assert!(found_symlink, "symlink entry not found in tar");
+    }
+
+    #[test]
+    fn test_digest_is_deterministic() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("file.txt"), "deterministic content").unwrap();
+
+        let layer1 = create_layer(tmp.path()).unwrap();
+        let layer2 = create_layer(tmp.path()).unwrap();
+
+        assert_eq!(layer1.digest, layer2.digest);
+    }
+}

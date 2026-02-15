@@ -1,3 +1,6 @@
+// thiserror/miette derive macros generate code that triggers false-positive unused_assignments
+#![allow(unused_assignments)]
+
 pub mod profile;
 pub mod resolve;
 pub mod schema;
@@ -7,14 +10,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum ParseError {
-    #[error("Failed to parse KDL spec")]
+    #[error("Failed to parse KDL spec: {detail}")]
     #[diagnostic(
         help("Check the KDL syntax in your spec file"),
         code(spec_parser::kdl_parse)
     )]
-    KdlError {
-        detail: String,
-    },
+    KdlError { detail: String },
 }
 
 impl From<knuffel::Error> for ParseError {

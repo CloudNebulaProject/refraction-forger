@@ -321,3 +321,274 @@ async fn apply_action(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use spec_parser::schema::{EnsureDir, EnsureSymlink, FileOverlay, RemoveFiles, ShadowOverlay};
+    use std::pin::Pin;
+    use tempfile::TempDir;
+
+    struct MockToolRunner;
+
+    impl crate::tools::ToolRunner for MockToolRunner {
+        fn run<'a>(
+            &'a self,
+            _program: &'a str,
+            _args: &'a [&'a str],
+        ) -> Pin<Box<dyn std::future::Future<Output = Result<crate::tools::ToolOutput, ForgeError>> + Send + 'a>>
+        {
+            Box::pin(async {
+                Ok(crate::tools::ToolOutput {
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    exit_code: 0,
+                })
+            })
+        }
+    }
+
+    #[test]
+    fn test_file_overlay_copy() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        std::fs::write(files.path().join("config.txt"), "hello world").unwrap();
+
+        let action = OverlayAction::File(FileOverlay {
+            destination: "/etc/config.txt".to_string(),
+            source: Some("config.txt".to_string()),
+            owner: None,
+            group: None,
+            mode: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        let dest = staging.path().join("etc/config.txt");
+        assert!(dest.exists());
+        assert_eq!(std::fs::read_to_string(&dest).unwrap(), "hello world");
+    }
+
+    #[test]
+    fn test_file_overlay_empty() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        let action = OverlayAction::File(FileOverlay {
+            destination: "/var/log/app.log".to_string(),
+            source: None,
+            owner: None,
+            group: None,
+            mode: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        let dest = staging.path().join("var/log/app.log");
+        assert!(dest.exists());
+        assert_eq!(std::fs::read_to_string(&dest).unwrap(), "");
+    }
+
+    #[test]
+    fn test_file_overlay_missing_source() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        let action = OverlayAction::File(FileOverlay {
+            destination: "/etc/config.txt".to_string(),
+            source: Some("nonexistent.txt".to_string()),
+            owner: None,
+            group: None,
+            mode: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        let result =
+            rt.block_on(apply_action(&action, staging.path(), files.path(), &runner));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ForgeError::OverlaySourceMissing { .. }
+        ));
+    }
+
+    #[test]
+    fn test_ensure_dir() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        let action = OverlayAction::EnsureDir(EnsureDir {
+            path: "/var/run/myapp".to_string(),
+            owner: None,
+            group: None,
+            mode: Some("755".to_string()),
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        assert!(staging.path().join("var/run/myapp").is_dir());
+    }
+
+    #[test]
+    fn test_ensure_symlink() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        let action = OverlayAction::EnsureSymlink(EnsureSymlink {
+            path: "/usr/bin/python".to_string(),
+            target: "/usr/bin/python3".to_string(),
+            owner: None,
+            group: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        let link = staging.path().join("usr/bin/python");
+        assert!(link.symlink_metadata().is_ok());
+        assert_eq!(
+            std::fs::read_link(&link).unwrap().to_str().unwrap(),
+            "/usr/bin/python3"
+        );
+    }
+
+    #[test]
+    fn test_remove_file() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        std::fs::create_dir_all(staging.path().join("etc")).unwrap();
+        std::fs::write(staging.path().join("etc/unwanted.conf"), "remove me").unwrap();
+
+        let action = OverlayAction::RemoveFiles(RemoveFiles {
+            file: Some("/etc/unwanted.conf".to_string()),
+            dir: None,
+            pattern: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        assert!(!staging.path().join("etc/unwanted.conf").exists());
+    }
+
+    #[test]
+    fn test_remove_dir_contents() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        std::fs::create_dir_all(staging.path().join("var/cache/subdir")).unwrap();
+        std::fs::write(staging.path().join("var/cache/file1.txt"), "a").unwrap();
+        std::fs::write(staging.path().join("var/cache/file2.txt"), "b").unwrap();
+        std::fs::write(staging.path().join("var/cache/subdir/file3.txt"), "c").unwrap();
+
+        let action = OverlayAction::RemoveFiles(RemoveFiles {
+            file: None,
+            dir: Some("/var/cache".to_string()),
+            pattern: None,
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        // Directory itself should still exist
+        assert!(staging.path().join("var/cache").is_dir());
+        // But contents should be gone
+        assert!(!staging.path().join("var/cache/file1.txt").exists());
+        assert!(!staging.path().join("var/cache/subdir").exists());
+    }
+
+    #[test]
+    fn test_shadow_create_new() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        let action = OverlayAction::Shadow(ShadowOverlay {
+            username: "admin".to_string(),
+            password: "$6$rounds=5000$salt$hash".to_string(),
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        let shadow = std::fs::read_to_string(staging.path().join("etc/shadow")).unwrap();
+        assert!(shadow.contains("admin:$6$rounds=5000$salt$hash:::::::"));
+    }
+
+    #[test]
+    fn test_shadow_update_existing() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+
+        std::fs::create_dir_all(staging.path().join("etc")).unwrap();
+        std::fs::write(
+            staging.path().join("etc/shadow"),
+            "root:*LK*:::::::\nadmin:*LK*:::::::\n",
+        )
+        .unwrap();
+
+        let action = OverlayAction::Shadow(ShadowOverlay {
+            username: "admin".to_string(),
+            password: "$6$newhash".to_string(),
+        });
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = MockToolRunner;
+        rt.block_on(apply_action(&action, staging.path(), files.path(), &runner))
+            .unwrap();
+
+        let shadow = std::fs::read_to_string(staging.path().join("etc/shadow")).unwrap();
+        assert!(shadow.contains("admin:$6$newhash:::::::"));
+        assert!(shadow.contains("root:*LK*:::::::"));
+        assert!(!shadow.contains("admin:*LK*:::::::"));
+    }
+
+    #[tokio::test]
+    async fn test_apply_overlays_multiple() {
+        let staging = TempDir::new().unwrap();
+        let files = TempDir::new().unwrap();
+        let runner = MockToolRunner;
+
+        let actions = vec![
+            OverlayAction::EnsureDir(EnsureDir {
+                path: "/opt/myapp".to_string(),
+                owner: None,
+                group: None,
+                mode: None,
+            }),
+            OverlayAction::File(FileOverlay {
+                destination: "/opt/myapp/empty.conf".to_string(),
+                source: None,
+                owner: None,
+                group: None,
+                mode: None,
+            }),
+        ];
+
+        apply_overlays(&actions, staging.path(), files.path(), &runner)
+            .await
+            .unwrap();
+
+        assert!(staging.path().join("opt/myapp").is_dir());
+        assert!(staging.path().join("opt/myapp/empty.conf").exists());
+    }
+}

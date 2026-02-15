@@ -134,3 +134,112 @@ pub fn build_manifest(
 
     Ok((config_json, manifest_json))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tar_layer;
+    use tempfile::TempDir;
+
+    fn make_test_layer() -> LayerBlob {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("hello.txt"), "hello").unwrap();
+        tar_layer::create_layer(tmp.path()).unwrap()
+    }
+
+    #[test]
+    fn test_build_manifest_default_options() {
+        let layer = make_test_layer();
+        let (config_json, manifest_json) =
+            build_manifest(&[layer], &ImageOptions::default()).unwrap();
+
+        let config: serde_json::Value = serde_json::from_slice(&config_json).unwrap();
+        assert_eq!(config["os"], "solaris");
+        assert_eq!(config["architecture"], "amd64");
+
+        let manifest: serde_json::Value = serde_json::from_slice(&manifest_json).unwrap();
+        assert_eq!(manifest["schemaVersion"], 2);
+        assert_eq!(manifest["layers"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            manifest["layers"][0]["mediaType"],
+            "application/vnd.oci.image.layer.v1.tar+gzip"
+        );
+    }
+
+    #[test]
+    fn test_build_manifest_with_entrypoint_and_env() {
+        let layer = make_test_layer();
+        let options = ImageOptions {
+            os: "linux".to_string(),
+            architecture: "arm64".to_string(),
+            entrypoint: Some(vec!["/bin/sh".to_string(), "-c".to_string()]),
+            env: vec!["PATH=/bin:/usr/bin".to_string(), "HOME=/root".to_string()],
+        };
+
+        let (config_json, _manifest_json) = build_manifest(&[layer], &options).unwrap();
+
+        let config: serde_json::Value = serde_json::from_slice(&config_json).unwrap();
+        assert_eq!(config["os"], "linux");
+        assert_eq!(config["architecture"], "arm64");
+        let ep = config["config"]["Entrypoint"].as_array().unwrap();
+        assert_eq!(ep.len(), 2);
+        assert_eq!(ep[0], "/bin/sh");
+        let env = config["config"]["Env"].as_array().unwrap();
+        assert_eq!(env.len(), 2);
+        assert_eq!(env[0], "PATH=/bin:/usr/bin");
+    }
+
+    #[test]
+    fn test_build_manifest_multiple_layers() {
+        let tmp1 = TempDir::new().unwrap();
+        std::fs::write(tmp1.path().join("a.txt"), "aaa").unwrap();
+        let layer1 = tar_layer::create_layer(tmp1.path()).unwrap();
+
+        let tmp2 = TempDir::new().unwrap();
+        std::fs::write(tmp2.path().join("b.txt"), "bbb").unwrap();
+        let layer2 = tar_layer::create_layer(tmp2.path()).unwrap();
+
+        let (config_json, manifest_json) =
+            build_manifest(&[layer1, layer2], &ImageOptions::default()).unwrap();
+
+        let config: serde_json::Value = serde_json::from_slice(&config_json).unwrap();
+        let diff_ids = config["rootfs"]["diff_ids"].as_array().unwrap();
+        assert_eq!(diff_ids.len(), 2);
+
+        let manifest: serde_json::Value = serde_json::from_slice(&manifest_json).unwrap();
+        assert_eq!(manifest["layers"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_build_manifest_config_has_valid_digest_in_manifest() {
+        let layer = make_test_layer();
+        let (config_json, manifest_json) =
+            build_manifest(&[layer], &ImageOptions::default()).unwrap();
+
+        let manifest: serde_json::Value = serde_json::from_slice(&manifest_json).unwrap();
+        let config_digest = manifest["config"]["digest"].as_str().unwrap();
+        assert!(config_digest.starts_with("sha256:"));
+
+        // Verify digest matches actual config content
+        let mut hasher = Sha256::new();
+        hasher.update(&config_json);
+        let expected = format!("sha256:{}", hex::encode(hasher.finalize()));
+        assert_eq!(config_digest, expected);
+    }
+
+    #[test]
+    fn test_build_manifest_no_entrypoint() {
+        let layer = make_test_layer();
+        let options = ImageOptions {
+            entrypoint: None,
+            env: Vec::new(),
+            ..Default::default()
+        };
+
+        let (config_json, _) = build_manifest(&[layer], &options).unwrap();
+        let config: serde_json::Value = serde_json::from_slice(&config_json).unwrap();
+
+        // Config block should still exist but without entrypoint
+        assert!(config["config"]["Entrypoint"].is_null());
+    }
+}

@@ -61,3 +61,93 @@ fn append_or_create(path: &Path, content: &str) -> Result<(), std::io::Error> {
     file.write_all(content.as_bytes())?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use spec_parser::schema::User;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_create_single_user() {
+        let staging = TempDir::new().unwrap();
+
+        let customization = Customization {
+            r#if: None,
+            users: vec![User {
+                name: "testuser".to_string(),
+            }],
+        };
+
+        apply(&customization, staging.path()).unwrap();
+
+        let passwd = std::fs::read_to_string(staging.path().join("etc/passwd")).unwrap();
+        assert!(passwd.contains("testuser:x:1000:1000::/home/testuser:/bin/sh"));
+
+        let shadow = std::fs::read_to_string(staging.path().join("etc/shadow")).unwrap();
+        assert!(shadow.contains("testuser:*LK*:::::::"));
+
+        let group = std::fs::read_to_string(staging.path().join("etc/group")).unwrap();
+        assert!(group.contains("testuser::1000:"));
+    }
+
+    #[test]
+    fn test_create_multiple_users() {
+        let staging = TempDir::new().unwrap();
+
+        let customization = Customization {
+            r#if: None,
+            users: vec![
+                User { name: "alice".to_string() },
+                User { name: "bob".to_string() },
+            ],
+        };
+
+        apply(&customization, staging.path()).unwrap();
+
+        let passwd = std::fs::read_to_string(staging.path().join("etc/passwd")).unwrap();
+        assert!(passwd.contains("alice"));
+        assert!(passwd.contains("bob"));
+    }
+
+    #[test]
+    fn test_create_user_appends_to_existing() {
+        let staging = TempDir::new().unwrap();
+
+        // Create pre-existing /etc/passwd
+        std::fs::create_dir_all(staging.path().join("etc")).unwrap();
+        std::fs::write(
+            staging.path().join("etc/passwd"),
+            "root:x:0:0:root:/root:/bin/sh\n",
+        )
+        .unwrap();
+
+        let customization = Customization {
+            r#if: None,
+            users: vec![User {
+                name: "admin".to_string(),
+            }],
+        };
+
+        apply(&customization, staging.path()).unwrap();
+
+        let passwd = std::fs::read_to_string(staging.path().join("etc/passwd")).unwrap();
+        assert!(passwd.contains("root:x:0:0:root:/root:/bin/sh"));
+        assert!(passwd.contains("admin:x:1000:1000::/home/admin:/bin/sh"));
+    }
+
+    #[test]
+    fn test_no_users_is_noop() {
+        let staging = TempDir::new().unwrap();
+
+        let customization = Customization {
+            r#if: None,
+            users: vec![],
+        };
+
+        apply(&customization, staging.path()).unwrap();
+
+        // etc directory should not have been created
+        assert!(!staging.path().join("etc").exists());
+    }
+}

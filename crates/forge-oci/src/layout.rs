@@ -111,3 +111,124 @@ fn write_file(path: &Path, data: &[u8]) -> Result<(), LayoutError> {
         source: e,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tar_layer;
+    use tempfile::TempDir;
+
+    fn make_test_layer() -> LayerBlob {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("test.txt"), "test content").unwrap();
+        tar_layer::create_layer(tmp.path()).unwrap()
+    }
+
+    #[test]
+    fn test_write_oci_layout_creates_structure() {
+        let output = TempDir::new().unwrap();
+        let layer = make_test_layer();
+
+        let config_json = b"{\"test\": \"config\"}";
+        let manifest_json = b"{\"test\": \"manifest\"}";
+
+        write_oci_layout(output.path(), &[layer], config_json, manifest_json).unwrap();
+
+        // Verify directory structure
+        assert!(output.path().join("oci-layout").exists());
+        assert!(output.path().join("index.json").exists());
+        assert!(output.path().join("blobs/sha256").is_dir());
+    }
+
+    #[test]
+    fn test_oci_layout_file_content() {
+        let output = TempDir::new().unwrap();
+        let layer = make_test_layer();
+        let config_json = b"{}";
+        let manifest_json = b"{}";
+
+        write_oci_layout(output.path(), &[layer], config_json, manifest_json).unwrap();
+
+        let oci_layout: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(output.path().join("oci-layout")).unwrap())
+                .unwrap();
+        assert_eq!(oci_layout["imageLayoutVersion"], "1.0.0");
+    }
+
+    #[test]
+    fn test_index_json_references_manifest() {
+        let output = TempDir::new().unwrap();
+        let layer = make_test_layer();
+        let config_json = b"{\"config\": true}";
+        let manifest_json = b"{\"manifest\": true}";
+
+        write_oci_layout(output.path(), &[layer], config_json, manifest_json).unwrap();
+
+        let index: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(output.path().join("index.json")).unwrap())
+                .unwrap();
+
+        assert_eq!(index["schemaVersion"], 2);
+        let manifests = index["manifests"].as_array().unwrap();
+        assert_eq!(manifests.len(), 1);
+        assert_eq!(
+            manifests[0]["mediaType"],
+            "application/vnd.oci.image.manifest.v1+json"
+        );
+        let digest = manifests[0]["digest"].as_str().unwrap();
+        assert!(digest.starts_with("sha256:"));
+        assert_eq!(manifests[0]["size"], manifest_json.len());
+    }
+
+    #[test]
+    fn test_layer_blob_written_to_blobs_dir() {
+        let output = TempDir::new().unwrap();
+        let layer = make_test_layer();
+        let digest_hex = layer.digest.strip_prefix("sha256:").unwrap().to_string();
+        let expected_data = layer.data.clone();
+
+        write_oci_layout(output.path(), &[layer], b"{}", b"{}").unwrap();
+
+        let blob_path = output.path().join("blobs/sha256").join(&digest_hex);
+        assert!(blob_path.exists(), "Layer blob not found at {}", blob_path.display());
+        assert_eq!(std::fs::read(&blob_path).unwrap(), expected_data);
+    }
+
+    #[test]
+    fn test_config_blob_written_with_correct_digest() {
+        let output = TempDir::new().unwrap();
+        let layer = make_test_layer();
+        let config_json = b"{\"architecture\":\"amd64\"}";
+
+        let mut hasher = Sha256::new();
+        hasher.update(config_json);
+        let config_digest_hex = hex::encode(hasher.finalize());
+
+        write_oci_layout(output.path(), &[layer], config_json, b"{}").unwrap();
+
+        let config_blob_path = output.path().join("blobs/sha256").join(&config_digest_hex);
+        assert!(config_blob_path.exists());
+        assert_eq!(std::fs::read(&config_blob_path).unwrap(), config_json);
+    }
+
+    #[test]
+    fn test_multiple_layers() {
+        let output = TempDir::new().unwrap();
+
+        let tmp1 = TempDir::new().unwrap();
+        std::fs::write(tmp1.path().join("a.txt"), "aaa").unwrap();
+        let layer1 = tar_layer::create_layer(tmp1.path()).unwrap();
+
+        let tmp2 = TempDir::new().unwrap();
+        std::fs::write(tmp2.path().join("b.txt"), "bbb").unwrap();
+        let layer2 = tar_layer::create_layer(tmp2.path()).unwrap();
+
+        let digest1 = layer1.digest.strip_prefix("sha256:").unwrap().to_string();
+        let digest2 = layer2.digest.strip_prefix("sha256:").unwrap().to_string();
+
+        write_oci_layout(output.path(), &[layer1, layer2], b"{}", b"{}").unwrap();
+
+        assert!(output.path().join("blobs/sha256").join(&digest1).exists());
+        assert!(output.path().join("blobs/sha256").join(&digest2).exists());
+    }
+}
