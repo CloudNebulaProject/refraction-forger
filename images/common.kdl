@@ -1,0 +1,20 @@
+// SMF profiles and basic network/name service configuration ported from image-builder JSON
+overlays {
+    // SMF default profiles
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml" owner="root" group="root"
+    ensure-symlink "/etc/svc/profile/inetd_services.xml" target="inetd_generic.xml" owner="root" group="root"
+    ensure-symlink "/etc/svc/profile/platform.xml" target="platform_none.xml" owner="root" group="root"
+
+    // Name service profile
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml" owner="root" group="root"
+
+    // nsswitch: use the dns profile file; symlink to keep parity with imagesrc copy
+    ensure-symlink "/etc/nsswitch.conf" target="nsswitch.dns" owner="root" group="root"
+
+    // Network basics and identity
+    file destination="/etc/inet/hosts" source="etc/hosts" owner="root" group="root" mode="644"
+    file destination="/etc/nodename" source="etc/nodename" owner="root" group="root" mode="644"
+
+    // Empty resolv.conf; can be populated by DHCP or later config
+    file destination="/etc/resolv.conf" owner="root" group="root" mode="644"
+}

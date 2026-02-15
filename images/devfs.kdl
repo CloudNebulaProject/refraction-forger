@@ -1,0 +1,23 @@
+overlays {
+    devfsadm
+    ensure-dir "/dev/cfg" owner="root" group="root" mode="755"
+    ensure-dir "/dev/dsk" owner="root" group="sys" mode="755"
+    ensure-dir "/dev/rdsk" owner="root" group="sys" mode="755"
+    ensure-dir "/dev/usb" owner="root" group="root" mode="755"
+
+    remove-files dir="/dev/cfg"
+    remove-files dir="/dev/dsk"
+    remove-files dir="/dev/rdsk"
+    remove-files dir="/dev/usb"
+
+    // Re-create dirs
+    ensure-dir "/dev/cfg" owner="root" group="root" mode="755"
+    ensure-dir "/dev/dsk" owner="root" group="sys" mode="755"
+    ensure-dir "/dev/rdsk" owner="root" group="sys" mode="755"
+    ensure-dir "/dev/usb" owner="root" group="root" mode="755"
+
+    ensure-symlink "/dev/msglog" target="../devices/pseudo/sysmsg@0:msglog" owner="root" group="root"
+    
+    // Empty file (implied by missing source)
+    file destination="/reconfigure" owner="root" group="root" mode="644"
+}

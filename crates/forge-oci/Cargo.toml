@@ -1,0 +1,21 @@
+[package]
+name = "forge-oci"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+miette = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+oci-spec = { workspace = true }
+oci-client = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+bytes = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+walkdir = { workspace = true }

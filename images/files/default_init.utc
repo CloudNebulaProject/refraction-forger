@@ -1,0 +1,4 @@
+# OmniOS default /etc/default/init file (UTC timezone)
+# Upstream reference: omnios-image-builder/templates/files/default_init.utc
+CMASK=022
+TZ=UTC

@@ -1,0 +1,47 @@
+// OmniOS bloody base configuration (ported from image-builder JSON)
+
+metadata name="omnios-bloody-base" version="0.0.1" description="OmniOS bloody: core + extra publishers; base incorporation 'entire'"
+
+repositories {
+    // Core publisher
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+
+    // Extra publisher (enable via features in consumers if applicable)
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+// Prefer the standard OmniOS incorporation umbrella
+incorporation "entire"
+
+// Approve IPS CA certs used for mTLS when contacting publishers
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+// IPS variants to set inside the target image
+variants {
+    // OmniOS global zone
+    set name="opensolaris.zone" value="global"
+}
+
+// Packages from the artifact phase JSON (finalization steps like pkg_purge_history
+// and seed_smf are intentionally omitted here)
+packages {
+    package "/editor/vim"
+    package "/network/rsync"
+    package "/system/library/gcc-runtime"
+    package "/system/library/g++-runtime"
+    package "/network/ftp"
+    package "/network/openssh-server"
+    package "/network/telnet"
+    package "/service/network/ntpsec"
+    package "/web/curl"
+    package "/web/wget"
+    package "/system/management/mdata-client"
+}
+
+// Build-only tools
+packages if="build" {
+    package "/developer/build-essential"
+    package "/developer/omnios-build-tools"
+}
