@@ -1,0 +1,5 @@
+[book]
+authors = ["Till Wegmueller"]
+language = "en"
+src = "src"
+title = "Refraction Forger"

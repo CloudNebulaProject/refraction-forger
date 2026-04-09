@@ -1,0 +1,3034 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Refraction Forger</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Refraction Forger</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="refraction-forger"><a class="header" href="#refraction-forger">Refraction Forger</a></h1>
+<p>Refraction Forger is a declarative image building tool that creates optimized OS images from simple specification files. It is designed for infrastructure engineers, DevOps teams, and OS distribution maintainers who need reproducible, cacheable image builds across multiple platforms.</p>
+<h2 id="what-it-does"><a class="header" href="#what-it-does">What It Does</a></h2>
+<p>Forger reads a <code>.kdl</code> specification file that declares what your image should contain — packages, files, users, boot configuration — and produces ready-to-deploy artifacts:</p>
+<ul>
+<li><strong>QCOW2 virtual machine images</strong> with ZFS or ext4 filesystems</li>
+<li><strong>OCI container images</strong> for container runtimes</li>
+<li><strong>Tar archives</strong> for further processing or embedding</li>
+</ul>
+<p>Built artifacts can be pushed directly to OCI registries like GHCR.</p>
+<h2 id="why-forger"><a class="header" href="#why-forger">Why Forger?</a></h2>
+<p>Traditional image building tools fall into two camps:</p>
+<ol>
+<li><strong>Shell script orchestrators</strong> (like the illumos <code>image-builder</code>) that require a matching host OS, root privileges, and careful manual sequencing.</li>
+<li><strong>ISO boot automators</strong> (like HashiCorp Packer) that spin up a full installer, type keystrokes into a virtual console, and wait — slowly.</li>
+</ol>
+<p>Forger takes a different approach. It assembles images <em>directly</em> by calling package managers and filesystem tools, skipping the installer entirely. Builds that took 20+ minutes with Packer complete in a fraction of the time.</p>
+<p>When your host doesn't match the target OS, Forger automatically spins up an ephemeral builder VM, transfers the spec, builds inside it, and retrieves the artifacts — no manual VM management needed.</p>
+<h2 id="primary-focus"><a class="header" href="#primary-focus">Primary Focus</a></h2>
+<p>Forger's primary focus is <strong>illumos</strong> distributions, particularly <strong>OmniOS</strong>. The illumos ecosystem uses IPS (Image Packaging System) and ZFS, both of which Forger understands natively.</p>
+<p>Linux support (starting with <strong>Ubuntu</strong>) is included as a secondary target. The long-term goal is to bring IPS to Linux via a Rust implementation, making Forger's packaging model available across operating systems. In the meantime, popular Linux distributions are supported to provide a broad userbase familiar with tools like Packer.</p>
+<h2 id="how-this-book-is-organized"><a class="header" href="#how-this-book-is-organized">How This Book Is Organized</a></h2>
+<ul>
+<li><strong>Getting Started</strong> walks you through installation and building your first image.</li>
+<li><strong>The KDL Spec Language</strong> is a complete guide to writing image specifications.</li>
+<li><strong>Composability</strong> explains how to chain builds, share configuration, and create variants.</li>
+<li><strong>Distro Guide</strong> covers distribution-specific details for illumos and Linux.</li>
+<li><strong>Output Formats</strong> describes each artifact type and how to deploy them.</li>
+<li><strong>Architecture</strong> explains the internal design for contributors and advanced users.</li>
+<li><strong>Migration</strong> helps you move from <code>omnios-image-builder</code> or Packer.</li>
+<li><strong>Reference</strong> provides CLI help, spec schema, and complete examples.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<p>Forger is written in Rust and builds as a single static binary. You need:</p>
+<ul>
+<li><strong>Rust toolchain</strong> (1.85 or later) via <a href="https://rustup.rs/">rustup</a></li>
+<li><strong>Git</strong> for fetching the source</li>
+</ul>
+<p>For <strong>local builds</strong> (building images directly on your machine), you also need:</p>
+<ul>
+<li>The target OS's package manager available (e.g., <code>pkg</code> on OmniOS, <code>debootstrap</code> + <code>apt</code> on Ubuntu)</li>
+<li>Root/sudo access for filesystem operations</li>
+<li><code>qemu-img</code> for QCOW2 conversion</li>
+<li>ZFS utilities if building ZFS-based images</li>
+</ul>
+<p>For <strong>remote builds</strong> (the default when your host doesn't match the target), you only need:</p>
+<ul>
+<li>QEMU installed (for the builder VM)</li>
+<li>No root access required — Forger uses user-mode networking</li>
+</ul>
+<h2 id="building-from-source"><a class="header" href="#building-from-source">Building From Source</a></h2>
+<pre><code class="language-bash">git clone https://github.com/cloudnebulaproject/refraction-forger.git
+cd refraction-forger
+cargo build --release
+</code></pre>
+<p>The binary is at <code>target/release/forger</code>.</p>
+<h3 id="cross-compilation-for-illumos"><a class="header" href="#cross-compilation-for-illumos">Cross-Compilation for illumos</a></h3>
+<p>If you're building on Linux for deployment on illumos:</p>
+<pre><code class="language-bash"># Install the cross-compilation tool
+cargo install cross
+
+# Build for illumos
+cross build --release --target x86_64-unknown-illumos
+</code></pre>
+<p>The project includes a <code>Cross.toml</code> with the illumos target preconfigured.</p>
+<h2 id="verify-installation"><a class="header" href="#verify-installation">Verify Installation</a></h2>
+<pre><code class="language-bash">forger --help
+</code></pre>
+<p>You should see the five subcommands: <code>build</code>, <code>validate</code>, <code>inspect</code>, <code>push</code>, and <code>targets</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="your-first-image"><a class="header" href="#your-first-image">Your First Image</a></h1>
+<p>Let's build a minimal OmniOS VM image. Create a file called <code>my-image.kdl</code>:</p>
+<pre><code class="language-kdl">metadata name="my-first-image" version="1.0.0" description="A minimal OmniOS image"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+incorporation "entire"
+
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+}
+
+target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<h2 id="validate-first"><a class="header" href="#validate-first">Validate First</a></h2>
+<p>Before building, validate the spec to catch syntax errors:</p>
+<pre><code class="language-bash">forger validate --spec my-image.kdl
+</code></pre>
+<h2 id="inspect-the-resolved-spec"><a class="header" href="#inspect-the-resolved-spec">Inspect the Resolved Spec</a></h2>
+<p>See what the build will do after resolving includes and applying profiles:</p>
+<pre><code class="language-bash">forger inspect --spec my-image.kdl
+</code></pre>
+<h2 id="list-targets"><a class="header" href="#list-targets">List Targets</a></h2>
+<p>Check what targets are defined:</p>
+<pre><code class="language-bash">forger targets --spec my-image.kdl
+</code></pre>
+<p>Output:</p>
+<pre><code>vm (qcow2)
+</code></pre>
+<h2 id="build"><a class="header" href="#build">Build</a></h2>
+<pre><code class="language-bash">forger build --spec my-image.kdl
+</code></pre>
+<p>This will:</p>
+<ol>
+<li>Detect whether to build locally or spin up a builder VM</li>
+<li><strong>Phase 1</strong>: Create a rootfs by initializing IPS, setting publishers, and installing packages</li>
+<li><strong>Phase 2</strong>: Create a 2GB raw disk, set up a ZFS pool, populate it from the rootfs, install the UEFI bootloader, and convert to QCOW2</li>
+</ol>
+<p>The output lands in <code>./output/</code> by default.</p>
+<h2 id="build-a-specific-target"><a class="header" href="#build-a-specific-target">Build a Specific Target</a></h2>
+<p>If your spec defines multiple targets, build just one:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --target vm
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li>Add <a href="getting-started/../spec/overlays.html">overlays</a> for custom configuration files</li>
+<li>Set up <a href="getting-started/../composability/base.html">base specs</a> for caching</li>
+<li>Configure a <a href="getting-started/../spec/builder.html">builder VM</a> for cross-platform builds</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="build-modes"><a class="header" href="#build-modes">Build Modes</a></h1>
+<p>Forger supports two build modes: <strong>local</strong> and <strong>remote</strong>. The mode is selected automatically based on your environment, or you can force it with CLI flags.</p>
+<h2 id="local-build"><a class="header" href="#local-build">Local Build</a></h2>
+<p>A local build runs directly on your host machine. This is the fastest option but requires:</p>
+<ul>
+<li>The target distro's package manager to be available</li>
+<li>Root/sudo access for filesystem operations</li>
+<li>Matching architecture (e.g., building OmniOS images on OmniOS)</li>
+</ul>
+<pre><code class="language-bash">forger build --spec my-image.kdl --local
+</code></pre>
+<p>Use <code>--local</code> to skip builder VM detection and force a local build.</p>
+<h2 id="remote-build-builder-vm"><a class="header" href="#remote-build-builder-vm">Remote Build (Builder VM)</a></h2>
+<p>When your host doesn't match the target OS — for example, building OmniOS images from a Linux workstation — Forger spins up an ephemeral builder VM:</p>
+<ol>
+<li>Downloads or uses a cached builder image (OCI reference, URL, or local file)</li>
+<li>Creates a cloud-init configuration with an ephemeral SSH keypair</li>
+<li>Starts a QEMU VM with user-mode networking (no root needed on host)</li>
+<li>Transfers the <code>forger</code> binary, spec file, and overlay files via SSH</li>
+<li>Runs the build inside the VM</li>
+<li>Downloads the finished artifacts</li>
+<li>Destroys the VM</li>
+</ol>
+<pre><code class="language-bash">forger build --spec my-image.kdl --use-builder
+</code></pre>
+<p>Use <code>--use-builder</code> to force a remote build even when local build is possible.</p>
+<h3 id="default-builder-images"><a class="header" href="#default-builder-images">Default Builder Images</a></h3>
+<p>If no builder is specified in the spec or on the CLI, Forger uses sensible defaults:</p>
+<div class="table-wrapper"><table><thead><tr><th>Target Distro</th><th>Default Builder Image</th></tr></thead><tbody>
+<tr><td>OmniOS</td><td><code>oci://ghcr.io/cloudnebulaproject/omnios-builder:latest</code></td></tr>
+<tr><td>Ubuntu</td><td><code>oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="override-the-builder-image"><a class="header" href="#override-the-builder-image">Override the Builder Image</a></h3>
+<p>From the CLI:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --builder-image oci://my-registry/my-builder:v1
+</code></pre>
+<p>Or in the spec file (see <a href="getting-started/../spec/builder.html">Builder Configuration</a>).</p>
+<h2 id="how-forger-chooses"><a class="header" href="#how-forger-chooses">How Forger Chooses</a></h2>
+<p>When neither <code>--local</code> nor <code>--use-builder</code> is specified, Forger checks whether the current host can satisfy the build requirements (package manager availability, OS match). If it can, it builds locally. Otherwise, it falls back to a builder VM.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="spec-overview"><a class="header" href="#spec-overview">Spec Overview</a></h1>
+<p>Forger uses <a href="https://kdl.dev/">KDL</a> (KDL Document Language) as its specification format. KDL is a node-based document language that's more expressive than TOML or JSON while being more readable than YAML.</p>
+<h2 id="why-kdl"><a class="header" href="#why-kdl">Why KDL?</a></h2>
+<ul>
+<li><strong>Node-based</strong>: natural fit for declaring image components (packages, files, targets)</li>
+<li><strong>Arguments and properties</strong>: nodes can have positional arguments and named properties on the same line</li>
+<li><strong>Children blocks</strong>: nested structure without deep indentation</li>
+<li><strong>Type annotations</strong>: optional type safety</li>
+<li><strong>Comments</strong>: <code>//</code> line comments and <code>/* */</code> block comments</li>
+</ul>
+<h2 id="spec-file-structure"><a class="header" href="#spec-file-structure">Spec File Structure</a></h2>
+<p>A complete spec file has these top-level sections:</p>
+<pre><code class="language-kdl">// Identity
+metadata name="my-image" version="1.0.0" description="What this image is"
+
+// Which OS (omit for OmniOS default)
+distro "ubuntu-22.04"
+
+// Composability
+base "path/to/parent.kdl"
+include "path/to/shared-steps.kdl"
+
+// Package sources
+repositories {
+    // IPS publishers or APT mirrors
+}
+
+// IPS-specific
+incorporation "entire"
+variants { /* ... */ }
+certificates { /* ... */ }
+
+// What to install
+packages {
+    package "pkg-name"
+}
+
+// Files and directories to place
+overlays {
+    // file, ensure-dir, ensure-symlink, shadow, devfsadm, remove-files
+}
+
+// Users and system setup
+customization {
+    user "username"
+}
+
+// Builder VM config (optional)
+builder {
+    image "oci://..."
+    vcpus 4
+    memory 4096
+}
+
+// What to produce
+target "name" kind="qcow2" {
+    // target-specific settings
+}
+</code></pre>
+<p>All sections are optional except that you need at least one <code>target</code> to build anything.</p>
+<h2 id="file-resolution"><a class="header" href="#file-resolution">File Resolution</a></h2>
+<p>Paths in <code>base</code>, <code>include</code>, and overlay <code>source</code> fields are resolved relative to the spec file's directory. This means you can organize specs and their supporting files together:</p>
+<pre><code>images/
+  omnios-base.kdl
+  omnios-disk.kdl        # base "omnios-base.kdl"
+  common.kdl
+  devfs.kdl
+  files/
+    etc/
+      hosts
+      resolv.conf
+      sshd_config
+    omniosce-ca.cert.pem
+</code></pre>
+<h2 id="validation"><a class="header" href="#validation">Validation</a></h2>
+<p>Always validate before building:</p>
+<pre><code class="language-bash">forger validate --spec my-image.kdl
+</code></pre>
+<p>This checks:</p>
+<ul>
+<li>KDL syntax correctness</li>
+<li>Schema conformance (required fields, valid types)</li>
+<li>Include/base resolution (files exist, no circular references)</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="metadata--distro"><a class="header" href="#metadata--distro">Metadata &amp; Distro</a></h1>
+<h2 id="metadata"><a class="header" href="#metadata">Metadata</a></h2>
+<p>The <code>metadata</code> node identifies your image:</p>
+<pre><code class="language-kdl">metadata name="omnios-base" version="1.0.0" description="Base OmniOS bloody image"
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>Yes</td><td>Image name (used in output filenames)</td></tr>
+<tr><td><code>version</code></td><td>Yes</td><td>Semantic version</td></tr>
+<tr><td><code>description</code></td><td>No</td><td>Human-readable description</td></tr>
+</tbody></table>
+</div>
+<h2 id="distro-selection"><a class="header" href="#distro-selection">Distro Selection</a></h2>
+<p>The <code>distro</code> node tells Forger which OS family to target. This determines the package manager, filesystem defaults, and build path.</p>
+<pre><code class="language-kdl">distro "ubuntu-22.04"
+</code></pre>
+<h3 id="supported-values"><a class="header" href="#supported-values">Supported Values</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Distro String</th><th>Family</th><th>Package Manager</th><th>Default Filesystem</th></tr></thead><tbody>
+<tr><td><em>(omitted)</em></td><td>OmniOS</td><td>IPS (<code>pkg</code>)</td><td>ZFS</td></tr>
+<tr><td><code>"ubuntu-22.04"</code></td><td>Ubuntu</td><td>APT (<code>debootstrap</code> + <code>apt</code>)</td><td>ext4</td></tr>
+</tbody></table>
+</div>
+<h3 id="how-distro-affects-the-build"><a class="header" href="#how-distro-affects-the-build">How Distro Affects the Build</a></h3>
+<p>The distro string maps to a <code>DistroFamily</code> internally:</p>
+<ul>
+<li><strong>OmniOS</strong>: Uses <code>pkg image-create</code> to initialize IPS, sets publishers, handles incorporations, variants, and CA certificates. ZFS is the default filesystem for QCOW2 targets.</li>
+<li><strong>Ubuntu</strong>: Uses <code>debootstrap</code> for initial rootfs, writes <code>sources.list</code>, runs <code>apt update</code> and <code>apt install</code>. ext4 is the default filesystem for QCOW2 targets.</li>
+</ul>
+<p>If no <code>distro</code> is specified, OmniOS is assumed. This reflects Forger's primary focus on the illumos ecosystem.</p>
+<h3 id="distro-and-builder-images"><a class="header" href="#distro-and-builder-images">Distro and Builder Images</a></h3>
+<p>The distro also determines the default builder VM image when no explicit builder is configured:</p>
+<div class="table-wrapper"><table><thead><tr><th>Distro Family</th><th>Default Builder</th></tr></thead><tbody>
+<tr><td>OmniOS</td><td><code>oci://ghcr.io/cloudnebulaproject/omnios-builder:latest</code></td></tr>
+<tr><td>Ubuntu</td><td><code>oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest</code></td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="repositories--publishers"><a class="header" href="#repositories--publishers">Repositories &amp; Publishers</a></h1>
+<p>The <code>repositories</code> block defines where packages are fetched from. The syntax differs between IPS (OmniOS) and APT (Ubuntu).</p>
+<h2 id="ips-publishers-omnios"><a class="header" href="#ips-publishers-omnios">IPS Publishers (OmniOS)</a></h2>
+<p>OmniOS uses IPS publishers — named package repositories with a URL origin:</p>
+<pre><code class="language-kdl">repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>Yes</td><td>Publisher name (e.g., <code>"omnios"</code>, <code>"extra.omnios"</code>)</td></tr>
+<tr><td><code>origin</code></td><td>Yes</td><td>Repository URL</td></tr>
+</tbody></table>
+</div>
+<h3 id="common-omnios-publishers"><a class="header" href="#common-omnios-publishers">Common OmniOS Publishers</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Origin</th><th>Contents</th></tr></thead><tbody>
+<tr><td><code>omnios</code></td><td><code>https://pkg.omnios.org/bloody/core/</code></td><td>Core OS packages (bloody)</td></tr>
+<tr><td><code>extra.omnios</code></td><td><code>https://pkg.omnios.org/bloody/extra/</code></td><td>Additional packages (bloody)</td></tr>
+<tr><td><code>omnios</code></td><td><code>https://pkg.omnios.org/r151050/core/</code></td><td>Core OS packages (stable)</td></tr>
+</tbody></table>
+</div>
+<h3 id="publisher-verification"><a class="header" href="#publisher-verification">Publisher Verification</a></h3>
+<p>OmniOS publishers use signed packages. Configure CA certificates in the <a href="spec/./repositories.html#certificates"><code>certificates</code></a> block to enable verification:</p>
+<pre><code class="language-kdl">certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+</code></pre>
+<p>The <code>certfile</code> path is resolved relative to the spec file's directory.</p>
+<h2 id="apt-mirrors-ubuntu"><a class="header" href="#apt-mirrors-ubuntu">APT Mirrors (Ubuntu)</a></h2>
+<p>Ubuntu uses APT repositories with suite and component selection:</p>
+<pre><code class="language-kdl">repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><em>(argument)</em></td><td>Yes</td><td>Mirror URL</td></tr>
+<tr><td><code>suite</code></td><td>Yes</td><td>Distribution codename (e.g., <code>"jammy"</code>)</td></tr>
+<tr><td><code>components</code></td><td>Yes</td><td>Space-separated component list (e.g., <code>"main universe"</code>)</td></tr>
+</tbody></table>
+</div>
+<h3 id="common-ubuntu-mirrors"><a class="header" href="#common-ubuntu-mirrors">Common Ubuntu Mirrors</a></h3>
+<pre><code class="language-kdl">repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-updates" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-security" components="main universe"
+}
+</code></pre>
+<h2 id="deduplication"><a class="header" href="#deduplication">Deduplication</a></h2>
+<p>When specs are composed via <code>base</code> or <code>include</code>, repositories are merged by name (IPS) or URL (APT). Duplicate entries are deduplicated automatically.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="packages"><a class="header" href="#packages">Packages</a></h1>
+<p>The <code>packages</code> block declares which packages to install in the image. Package names follow the conventions of the target distro's package manager.</p>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<pre><code class="language-kdl">packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+    package "/service/network/ntpsec"
+}
+</code></pre>
+<p>Each <code>package</code> node takes a single argument: the package name.</p>
+<h2 id="ips-package-names-omnios"><a class="header" href="#ips-package-names-omnios">IPS Package Names (OmniOS)</a></h2>
+<p>IPS uses hierarchical FMRI (Fault Management Resource Identifier) paths:</p>
+<pre><code class="language-kdl">packages {
+    package "/editor/vim"                    // Editors
+    package "/network/openssh-server"        // Network services
+    package "/ooce/developer/rust"           // OmniOS Community Extra (OOCE)
+    package "/developer/build/gnu-make"      // Build tools
+    package "/driver/virtio/vioif"           // Virtio network driver
+}
+</code></pre>
+<p>The leading <code>/</code> is conventional for IPS. You can find available packages with <code>pkg search</code> on an OmniOS system or browse <a href="https://pkg.omnios.org">pkg.omnios.org</a>.</p>
+<h2 id="apt-package-names-ubuntu"><a class="header" href="#apt-package-names-ubuntu">APT Package Names (Ubuntu)</a></h2>
+<p>Ubuntu uses flat package names:</p>
+<pre><code class="language-kdl">packages {
+    package "build-essential"
+    package "curl"
+    package "git"
+    package "openssh-server"
+    package "linux-image-generic"
+}
+</code></pre>
+<h2 id="conditional-packages-profiles"><a class="header" href="#conditional-packages-profiles">Conditional Packages (Profiles)</a></h2>
+<p>Packages can be scoped to a <a href="spec/../composability/profiles.html">profile</a> using the <code>if</code> property. They're only installed when that profile is active:</p>
+<pre><code class="language-kdl">// Always installed
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+}
+
+// Only when building with --profile build
+packages if="build" {
+    package "/developer/build-essential"
+    package "/ooce/developer/omnios-build-tools"
+    package "/developer/build/gnu-make"
+}
+</code></pre>
+<p>Build with a profile:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --profile build
+</code></pre>
+<p>Multiple <code>packages</code> blocks with different <code>if</code> conditions can coexist in a single spec.</p>
+<h2 id="ips-incorporations"><a class="header" href="#ips-incorporations">IPS Incorporations</a></h2>
+<p>For OmniOS, the <code>incorporation</code> node pins the entire OS to a consistent version set:</p>
+<pre><code class="language-kdl">incorporation "entire"
+</code></pre>
+<p>This ensures all installed packages are compatible. The <code>entire</code> incorporation is standard for OmniOS and should almost always be included.</p>
+<h2 id="ips-variants"><a class="header" href="#ips-variants">IPS Variants</a></h2>
+<p>Variants control which facets of packages are installed:</p>
+<pre><code class="language-kdl">variants {
+    set name="opensolaris.zone" value="global"
+}
+</code></pre>
+<p>Setting <code>opensolaris.zone</code> to <code>"global"</code> ensures you get the full global-zone package set, including kernel modules and boot components. Use <code>"nonglobal"</code> for zone-only images.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="overlays"><a class="header" href="#overlays">Overlays</a></h1>
+<p>Overlays let you place files, create directories, manage symlinks, and configure system state in the image. They run after package installation.</p>
+<h2 id="file-overlay"><a class="header" href="#file-overlay">File Overlay</a></h2>
+<p>Copy a local file into the image:</p>
+<pre><code class="language-kdl">overlays {
+    file destination="/etc/ssh/sshd_config" source="files/etc/sshd_config"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>destination</code></td><td>Yes</td><td>Absolute path in the image</td></tr>
+<tr><td><code>source</code></td><td>Yes</td><td>Local file path (relative to spec file)</td></tr>
+</tbody></table>
+</div>
+<h2 id="ensure-directory"><a class="header" href="#ensure-directory">Ensure Directory</a></h2>
+<p>Create a directory with specific ownership and permissions:</p>
+<pre><code class="language-kdl">overlays {
+    ensure-dir "/opt/myapp" owner="root" group="root" mode="755"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><em>(argument)</em></td><td>Yes</td><td>Directory path in the image</td></tr>
+<tr><td><code>owner</code></td><td>No</td><td>Owner user</td></tr>
+<tr><td><code>group</code></td><td>No</td><td>Owner group</td></tr>
+<tr><td><code>mode</code></td><td>No</td><td>Octal permissions</td></tr>
+</tbody></table>
+</div>
+<h2 id="ensure-symlink"><a class="header" href="#ensure-symlink">Ensure Symlink</a></h2>
+<p>Create a symbolic link:</p>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/nsswitch.conf" target="/etc/nsswitch.dns"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><em>(argument)</em></td><td>Yes</td><td>Symlink path in the image</td></tr>
+<tr><td><code>target</code></td><td>Yes</td><td>What the symlink points to</td></tr>
+</tbody></table>
+</div>
+<p>This is commonly used for SMF profiles on illumos:</p>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml"
+    ensure-symlink "/etc/svc/profile/inetd_services.xml" target="inetd_generic.xml"
+    ensure-symlink "/etc/svc/profile/platform.xml" target="platform_none.xml"
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml"
+}
+</code></pre>
+<h2 id="remove-files"><a class="header" href="#remove-files">Remove Files</a></h2>
+<p>Remove files or directories from the image:</p>
+<pre><code class="language-kdl">overlays {
+    remove-files "/dev/dsk" "/dev/rdsk" "/dev/cfg" "/dev/usb"
+}
+</code></pre>
+<p>Takes one or more path arguments. Useful for cleaning up device nodes before recreating them with <code>devfsadm</code>.</p>
+<h2 id="shadow-password"><a class="header" href="#shadow-password">Shadow Password</a></h2>
+<p>Set a password hash for a user:</p>
+<pre><code class="language-kdl">overlays {
+    shadow username="root" password="$5$rounds=10000$hashedvalue"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>username</code></td><td>Yes</td><td>User whose password to set</td></tr>
+<tr><td><code>password</code></td><td>Yes</td><td>Password hash (crypt format)</td></tr>
+</tbody></table>
+</div>
+<h2 id="device-filesystem-devfsadm"><a class="header" href="#device-filesystem-devfsadm">Device Filesystem (devfsadm)</a></h2>
+<p>Run <code>devfsadm</code> to populate <code>/dev</code> with device nodes. This is essential for bootable illumos images:</p>
+<pre><code class="language-kdl">overlays {
+    devfsadm
+}
+</code></pre>
+<p>This is typically used in a dedicated <code>devfs.kdl</code> include file alongside directory creation and cleanup.</p>
+<h2 id="conditional-overlays"><a class="header" href="#conditional-overlays">Conditional Overlays</a></h2>
+<p>Like packages, overlay blocks can be scoped to profiles:</p>
+<pre><code class="language-kdl">overlays if="debug" {
+    file destination="/etc/system" source="files/etc/system.debug"
+}
+</code></pre>
+<h2 id="execution-order"><a class="header" href="#execution-order">Execution Order</a></h2>
+<p>Overlays execute in the order they appear in the spec. When multiple spec files are composed (base + includes), overlays from the base run first, followed by includes in order, then the current spec.</p>
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
+<pre><code class="language-kdl">overlays {
+    // Clean up device directories
+    remove-files "/dev/dsk" "/dev/rdsk" "/dev/cfg" "/dev/usb"
+
+    // Recreate them
+    ensure-dir "/dev/cfg" owner="root" group="root" mode="755"
+    ensure-dir "/dev/dsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/rdsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/usb" owner="root" group="root" mode="755"
+
+    // Populate device nodes
+    devfsadm
+
+    // System configuration
+    file destination="/etc/inet/hosts" source="files/etc/hosts"
+    file destination="/etc/nodename" source="files/etc/nodename"
+    ensure-symlink "/etc/nsswitch.conf" target="/etc/nsswitch.dns"
+
+    // Root password
+    shadow username="root" password="$5$rounds=10000$..."
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="customizations"><a class="header" href="#customizations">Customizations</a></h1>
+<p>The <code>customization</code> block configures users and system-level settings.</p>
+<h2 id="users"><a class="header" href="#users">Users</a></h2>
+<p>Create a user in the image:</p>
+<pre><code class="language-kdl">customization {
+    user "ci"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><em>(argument)</em></td><td>Yes</td><td>Username to create</td></tr>
+</tbody></table>
+</div>
+<p>The user is created with default settings appropriate for the target distro.</p>
+<h2 id="conditional-customizations"><a class="header" href="#conditional-customizations">Conditional Customizations</a></h2>
+<p>Like packages and overlays, customization blocks support profile filtering:</p>
+<pre><code class="language-kdl">customization if="ci" {
+    user "ci"
+}
+</code></pre>
+<p>This user is only created when the <code>ci</code> profile is active:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --profile ci
+</code></pre>
+<h2 id="combined-with-overlays"><a class="header" href="#combined-with-overlays">Combined with Overlays</a></h2>
+<p>For full user setup, combine customization with overlay operations:</p>
+<pre><code class="language-kdl">customization {
+    user "deploy"
+}
+
+overlays {
+    // Set user password
+    shadow username="deploy" password="$5$..."
+
+    // Ensure SSH directory
+    ensure-dir "/home/deploy/.ssh" owner="deploy" group="staff" mode="700"
+
+    // Deploy authorized keys
+    file destination="/home/deploy/.ssh/authorized_keys" source="files/authorized_keys"
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="targets"><a class="header" href="#targets">Targets</a></h1>
+<p>Targets define what Forger produces from the assembled rootfs. Each spec can have multiple targets, and you can build them selectively.</p>
+<h2 id="target-kinds"><a class="header" href="#target-kinds">Target Kinds</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Kind</th><th>Description</th><th>Typical Use</th></tr></thead><tbody>
+<tr><td><code>qcow2</code></td><td>Bootable VM disk image</td><td>Cloud VMs, hypervisors</td></tr>
+<tr><td><code>oci</code></td><td>OCI container image</td><td>Container runtimes</td></tr>
+<tr><td><code>artifact</code></td><td>Tar archive of the rootfs</td><td>Intermediate build stage, embedding</td></tr>
+</tbody></table>
+</div>
+<h2 id="qcow2-target"><a class="header" href="#qcow2-target">QCOW2 Target</a></h2>
+<p>Produces a bootable virtual machine disk image:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+    push-to "ghcr.io/myorg/my-image:latest"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>disk-size</code></td><td>Yes</td><td>—</td><td>Disk size (e.g., <code>"2G"</code>, <code>"2000M"</code>)</td></tr>
+<tr><td><code>bootloader</code></td><td>Yes</td><td>—</td><td><code>"uefi"</code>, <code>"grub"</code>, or <code>"grub-efi-amd64-bin"</code></td></tr>
+<tr><td><code>filesystem</code></td><td>No</td><td>Distro default</td><td><code>"zfs"</code> or <code>"ext4"</code></td></tr>
+<tr><td><code>push-to</code></td><td>No</td><td>—</td><td>OCI registry reference for auto-push</td></tr>
+<tr><td><code>pool</code></td><td>No</td><td>—</td><td>ZFS pool properties (ZFS only)</td></tr>
+</tbody></table>
+</div>
+<h3 id="zfs-pool-properties"><a class="header" href="#zfs-pool-properties">ZFS Pool Properties</a></h3>
+<pre><code class="language-kdl">pool {
+    property name="ashift" value="12"
+}
+</code></pre>
+<p><code>ashift=12</code> sets the ZFS block alignment to 4K sectors, which is correct for modern storage.</p>
+<h3 id="bootloader-options"><a class="header" href="#bootloader-options">Bootloader Options</a></h3>
+<ul>
+<li><strong><code>uefi</code></strong>: UEFI bootloader — recommended for illumos and modern Linux</li>
+<li><strong><code>grub</code></strong>: Legacy GRUB — for BIOS-boot OmniOS images</li>
+<li><strong><code>grub-efi-amd64-bin</code></strong>: GRUB EFI for Ubuntu — use with ext4</li>
+</ul>
+<h2 id="oci-target"><a class="header" href="#oci-target">OCI Target</a></h2>
+<p>Produces an OCI container image:</p>
+<pre><code class="language-kdl">target "container" kind="oci" {
+    entrypoint command="/bin/sh"
+    environment {
+        set "PATH" "/usr/bin:/bin:/usr/sbin:/sbin"
+        set "TZ" "UTC"
+    }
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>entrypoint</code></td><td>No</td><td>Container entrypoint command</td></tr>
+<tr><td><code>environment</code></td><td>No</td><td>Environment variables</td></tr>
+</tbody></table>
+</div>
+<p>The OCI target produces an OCI Image Layout directory containing:</p>
+<ul>
+<li>Compressed tar.gz layer(s) of the rootfs</li>
+<li>OCI manifest and config JSON</li>
+<li>SHA256-based blob digests</li>
+</ul>
+<h2 id="artifact-target"><a class="header" href="#artifact-target">Artifact Target</a></h2>
+<p>Produces a tar archive of the rootfs:</p>
+<pre><code class="language-kdl">target "archive" kind="artifact" {
+}
+</code></pre>
+<p>Artifact targets are the primary mechanism for <a href="spec/../composability/pipelines.html">multi-stage pipelines</a>. A parent spec can produce an artifact that a child spec consumes as its base.</p>
+<h2 id="multiple-targets"><a class="header" href="#multiple-targets">Multiple Targets</a></h2>
+<p>A single spec can define multiple targets:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    filesystem "zfs"
+}
+
+target "container" kind="oci" {
+    entrypoint command="/usr/sbin/sshd" 
+}
+
+target "archive" kind="artifact" {
+}
+</code></pre>
+<p>Build all targets:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl
+</code></pre>
+<p>Build a specific target:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --target vm
+</code></pre>
+<h2 id="auto-push"><a class="header" href="#auto-push">Auto-Push</a></h2>
+<p>When <code>push-to</code> is set on a target, Forger automatically pushes the artifact to the OCI registry after a successful build (unless <code>--skip-push</code> is used):</p>
+<pre><code class="language-bash"># Build and push
+forger build --spec my-image.kdl
+
+# Build without pushing
+forger build --spec my-image.kdl --skip-push
+</code></pre>
+<h2 id="listing-targets"><a class="header" href="#listing-targets">Listing Targets</a></h2>
+<p>View all targets in a spec:</p>
+<pre><code class="language-bash">forger targets --spec my-image.kdl
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="builder-configuration"><a class="header" href="#builder-configuration">Builder Configuration</a></h1>
+<p>The <code>builder</code> block configures the ephemeral VM used for remote builds. This is optional — Forger selects sensible defaults when omitted.</p>
+<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<pre><code class="language-kdl">builder {
+    image "oci://ghcr.io/cloudnebulaproject/omnios-builder:latest"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>image</code></td><td>No</td><td>Distro-specific default</td><td>Builder VM image (OCI ref, URL, or path)</td></tr>
+<tr><td><code>vcpus</code></td><td>No</td><td>Host-dependent</td><td>Number of virtual CPUs</td></tr>
+<tr><td><code>memory</code></td><td>No</td><td>Host-dependent</td><td>Memory in MB</td></tr>
+<tr><td><code>disk</code></td><td>No</td><td>20 (GB)</td><td>Disk overlay size in GB</td></tr>
+</tbody></table>
+</div>
+<h2 id="image-sources"><a class="header" href="#image-sources">Image Sources</a></h2>
+<p>The <code>image</code> property accepts three formats:</p>
+<h3 id="oci-registry-reference"><a class="header" href="#oci-registry-reference">OCI Registry Reference</a></h3>
+<pre><code class="language-kdl">builder {
+    image "oci://ghcr.io/myorg/my-builder:latest"
+}
+</code></pre>
+<p>Pulls a QCOW2 image from an OCI registry.</p>
+<h3 id="url"><a class="header" href="#url">URL</a></h3>
+<pre><code class="language-kdl">builder {
+    image "https://example.com/builders/omnios-builder.qcow2"
+}
+</code></pre>
+<p>Downloads the image directly.</p>
+<h3 id="local-path"><a class="header" href="#local-path">Local Path</a></h3>
+<pre><code class="language-kdl">builder {
+    image "/path/to/my-builder.qcow2"
+}
+</code></pre>
+<p>Uses a local QCOW2 file.</p>
+<h2 id="default-builder-images-1"><a class="header" href="#default-builder-images-1">Default Builder Images</a></h2>
+<p>When no builder image is specified (neither in the spec nor on the CLI), Forger uses:</p>
+<div class="table-wrapper"><table><thead><tr><th>Distro</th><th>Default Image</th></tr></thead><tbody>
+<tr><td>OmniOS</td><td><code>oci://ghcr.io/cloudnebulaproject/omnios-builder:latest</code></td></tr>
+<tr><td>Ubuntu</td><td><code>oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="how-the-builder-vm-works"><a class="header" href="#how-the-builder-vm-works">How the Builder VM Works</a></h2>
+<ol>
+<li><strong>Image resolution</strong>: Downloads or locates the builder image</li>
+<li><strong>Cloud-init</strong>: Generates a user-data config with an ephemeral SSH keypair and a <code>builder</code> user with passwordless sudo</li>
+<li><strong>VM creation</strong>: Starts QEMU with user-mode networking (no host root needed)</li>
+<li><strong>SSH connection</strong>: Retries SSH connection for up to 120 seconds while the VM boots</li>
+<li><strong>Transfer</strong>: Uploads the <code>forger</code> binary, spec files, and overlay files</li>
+<li><strong>Build</strong>: Executes the build command inside the VM</li>
+<li><strong>Download</strong>: Retrieves the build artifacts</li>
+<li><strong>Teardown</strong>: Destroys the VM (guaranteed, even on build failure)</li>
+</ol>
+<h2 id="cli-override"><a class="header" href="#cli-override">CLI Override</a></h2>
+<p>The builder image can be overridden from the CLI, taking precedence over the spec:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --builder-image /path/to/custom-builder.qcow2
+</code></pre>
+<h2 id="resource-sizing"><a class="header" href="#resource-sizing">Resource Sizing</a></h2>
+<p>For typical builds:</p>
+<ul>
+<li><strong>OmniOS base image</strong>: 2 vCPUs, 2048 MB RAM is sufficient</li>
+<li><strong>OmniOS with Rust/build tools</strong>: 4 vCPUs, 4096 MB RAM recommended</li>
+<li><strong>Ubuntu with build-essential</strong>: 4 vCPUs, 4096 MB RAM recommended</li>
+<li><strong>Disk</strong>: 20 GB is sufficient for most images; increase for large package sets</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="base-specs-build-caching"><a class="header" href="#base-specs-build-caching">Base Specs (Build Caching)</a></h1>
+<p>The <code>base</code> directive establishes a parent-child relationship between specs. This is Forger's primary caching mechanism: <strong>a parent spec produces an artifact, and a child spec consumes it</strong>.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<pre><code>omnios-base.kdl          (parent)
+  → builds artifact       (tar archive cached on disk or in registry)
+    → omnios-disk.kdl     (child, consumes the artifact)
+      → builds QCOW2
+</code></pre>
+<p>The parent handles the expensive, slow operations (OS installation, base package setup). The child adds customization and produces the final image. When the parent's output is cached, rebuilding the child skips the entire base installation.</p>
+<h2 id="syntax-1"><a class="header" href="#syntax-1">Syntax</a></h2>
+<p>In the child spec:</p>
+<pre><code class="language-kdl">base "omnios-base.kdl"
+
+// Child-specific additions
+packages {
+    package "/system/cloud-init"
+    package "/driver/virtio/vioif"
+}
+
+target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+}
+</code></pre>
+<p>The parent spec (<code>omnios-base.kdl</code>) defines the foundation:</p>
+<pre><code class="language-kdl">metadata name="omnios-base" version="1.0.0" description="Base OmniOS configuration"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+incorporation "entire"
+
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+}
+</code></pre>
+<h2 id="what-gets-inherited"><a class="header" href="#what-gets-inherited">What Gets Inherited</a></h2>
+<p>When a child references a parent via <code>base</code>:</p>
+<ul>
+<li><strong>Repositories</strong> are merged (deduplicated by name/URL)</li>
+<li><strong>Packages</strong> from both parent and child are installed</li>
+<li><strong>Overlays</strong> from the parent execute first, then the child's</li>
+<li><strong>Customizations</strong> from both are applied</li>
+<li><strong>Metadata</strong> from the child overrides the parent</li>
+<li><strong>Targets</strong> from the child are used (parent targets are not inherited)</li>
+</ul>
+<h2 id="caching-pipeline"><a class="header" href="#caching-pipeline">Caching Pipeline</a></h2>
+<p>The key insight is that <code>base</code> creates a <strong>build stage boundary</strong>. The parent's output (typically an artifact/tar) is the cache unit:</p>
+<ol>
+<li>First build: parent runs Phase 1 (full package installation), produces artifact</li>
+<li>Subsequent builds: if the parent spec hasn't changed, skip Phase 1 and start from the cached artifact</li>
+<li>The child only needs to apply its additional packages, overlays, and produce its targets</li>
+</ol>
+<p>This mirrors the strap→image→archive pipeline from the old <code>omnios-image-builder</code>, but expressed declaratively.</p>
+<h2 id="multi-level-inheritance"><a class="header" href="#multi-level-inheritance">Multi-Level Inheritance</a></h2>
+<p>Base specs can themselves have bases, creating a chain:</p>
+<pre><code>distro-base.kdl
+  → platform-base.kdl
+    → application-image.kdl
+</code></pre>
+<p>Each level adds or refines what the previous level established. Circular references are detected and rejected.</p>
+<h2 id="base-vs-include"><a class="header" href="#base-vs-include">Base vs Include</a></h2>
+<div class="table-wrapper"><table><thead><tr><th></th><th>Base</th><th>Include</th></tr></thead><tbody>
+<tr><td><strong>Relationship</strong></td><td>Parent → child (produces artifact for child to consume)</td><td>Sibling (shared steps imported)</td></tr>
+<tr><td><strong>Caching</strong></td><td>Yes — parent output is the cache boundary</td><td>No — just DRY for config</td></tr>
+<tr><td><strong>Merging</strong></td><td>Full merge with child overrides</td><td>Steps imported as-is</td></tr>
+<tr><td><strong>Targets</strong></td><td>Child's targets used</td><td>No target interaction</td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="includes-shared-steps"><a class="header" href="#includes-shared-steps">Includes (Shared Steps)</a></h1>
+<p>The <code>include</code> directive imports shared configuration steps from another spec file into the current spec. Unlike <code>base</code>, includes don't create a build-stage boundary — they simply pull in common definitions for reuse.</p>
+<h2 id="syntax-2"><a class="header" href="#syntax-2">Syntax</a></h2>
+<pre><code class="language-kdl">include "common.kdl"
+include "devfs.kdl"
+</code></pre>
+<h2 id="what-includes-do"><a class="header" href="#what-includes-do">What Includes Do</a></h2>
+<p>An include file is a regular <code>.kdl</code> spec containing overlays, packages, customizations, or other configuration. When included, its contents are merged into the including spec as if they were written inline.</p>
+<h3 id="example-commonkdl"><a class="header" href="#example-commonkdl">Example: <code>common.kdl</code></a></h3>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml"
+    ensure-symlink "/etc/svc/profile/inetd_services.xml" target="inetd_generic.xml"
+    ensure-symlink "/etc/svc/profile/platform.xml" target="platform_none.xml"
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml"
+
+    file destination="/etc/inet/hosts" source="files/etc/hosts"
+    file destination="/etc/nodename" source="files/etc/nodename"
+    file destination="/etc/resolv.conf" source="files/etc/resolv.conf"
+    ensure-symlink "/etc/nsswitch.conf" target="/etc/nsswitch.dns"
+}
+</code></pre>
+<h3 id="example-devfskdl"><a class="header" href="#example-devfskdl">Example: <code>devfs.kdl</code></a></h3>
+<pre><code class="language-kdl">overlays {
+    devfsadm
+
+    remove-files "/dev/dsk" "/dev/rdsk" "/dev/cfg" "/dev/usb"
+
+    ensure-dir "/dev/cfg" owner="root" group="root" mode="755"
+    ensure-dir "/dev/dsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/rdsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/usb" owner="root" group="root" mode="755"
+
+    ensure-symlink "/dev/msglog" target="../devices/pseudo/log@0:msglog"
+}
+</code></pre>
+<h2 id="using-includes"><a class="header" href="#using-includes">Using Includes</a></h2>
+<p>A disk image spec can import these shared steps:</p>
+<pre><code class="language-kdl">base "omnios-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+packages {
+    package "/system/cloud-init"
+}
+
+overlays {
+    file destination="/boot/conf.d/console" source="files/boot_console.115200"
+    shadow username="root" password="$5$..."
+}
+
+target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+}
+</code></pre>
+<h2 id="execution-order-1"><a class="header" href="#execution-order-1">Execution Order</a></h2>
+<ol>
+<li>Base spec's packages, overlays, and customizations run first</li>
+<li>Include files run in the order they appear</li>
+<li>The current spec's content runs last</li>
+</ol>
+<p>This gives you control over layering: device filesystem setup (<code>devfs.kdl</code>) before network configuration (<code>common.kdl</code>) before image-specific overlays.</p>
+<h2 id="when-to-use-include-vs-base"><a class="header" href="#when-to-use-include-vs-base">When to Use Include vs Base</a></h2>
+<ul>
+<li><strong>Include</strong>: Shared configuration snippets used across multiple specs (SMF profiles, network setup, device nodes)</li>
+<li><strong>Base</strong>: A full image foundation that produces a cached artifact consumed by derivative images</li>
+</ul>
+<p>Includes are lightweight — they don't trigger a separate build phase or produce intermediate artifacts.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="profiles-conditional-variants"><a class="header" href="#profiles-conditional-variants">Profiles (Conditional Variants)</a></h1>
+<p>Profiles let you create multiple image variants from a single spec. Blocks tagged with <code>if="profile-name"</code> are only included when that profile is active.</p>
+<h2 id="syntax-3"><a class="header" href="#syntax-3">Syntax</a></h2>
+<p>Tag any <code>packages</code>, <code>overlays</code>, or <code>customization</code> block with an <code>if</code> property:</p>
+<pre><code class="language-kdl">// Always included (no condition)
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+}
+
+// Only when --profile build is active
+packages if="build" {
+    package "/developer/build-essential"
+    package "/ooce/developer/omnios-build-tools"
+}
+
+// Only when --profile ci is active
+customization if="ci" {
+    user "ci"
+}
+
+overlays if="debug" {
+    file destination="/etc/system" source="files/etc/system.debug"
+}
+</code></pre>
+<h2 id="activating-profiles"><a class="header" href="#activating-profiles">Activating Profiles</a></h2>
+<p>Use the <code>--profile</code> flag (repeatable) when building or inspecting:</p>
+<pre><code class="language-bash"># No profiles — just the base packages
+forger build --spec my-image.kdl
+
+# With build tools
+forger build --spec my-image.kdl --profile build
+
+# With build tools AND CI user
+forger build --spec my-image.kdl --profile build --profile ci
+
+# Inspect with profiles to see what would be included
+forger inspect --spec my-image.kdl --profile build --profile ci
+</code></pre>
+<h2 id="how-filtering-works"><a class="header" href="#how-filtering-works">How Filtering Works</a></h2>
+<p>Profile filtering happens after spec resolution (base + include merging) but before the build starts:</p>
+<ol>
+<li>Parse and resolve the full spec (with all blocks)</li>
+<li>Apply profile filter:
+<ul>
+<li>Blocks with <strong>no <code>if</code></strong> condition → always kept</li>
+<li>Blocks where <code>if</code> value <strong>matches</strong> an active profile → kept</li>
+<li>Blocks where <code>if</code> value <strong>doesn't match</strong> any active profile → removed</li>
+</ul>
+</li>
+<li>Build proceeds with the filtered spec</li>
+</ol>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h3 id="development-vs-production"><a class="header" href="#development-vs-production">Development vs Production</a></h3>
+<pre><code class="language-kdl">packages {
+    package "/network/openssh-server"
+}
+
+packages if="dev" {
+    package "/developer/build-essential"
+    package "/diagnostic/top"
+}
+
+overlays if="dev" {
+    shadow username="root" password="$5$..."
+}
+</code></pre>
+<h3 id="ci-variants"><a class="header" href="#ci-variants">CI Variants</a></h3>
+<pre><code class="language-kdl">packages if="rust-ci" {
+    package "/ooce/developer/rust"
+    package "/developer/build/gnu-make"
+}
+
+packages if="go-ci" {
+    package "/ooce/developer/go"
+}
+</code></pre>
+<h3 id="cloud-provider-specific"><a class="header" href="#cloud-provider-specific">Cloud Provider Specific</a></h3>
+<pre><code class="language-kdl">overlays if="aws" {
+    file destination="/boot/conf.d/console" source="files/boot_console.aws"
+    file destination="/etc/dhcp/dhcpagent" source="files/dhcpagent.aws"
+}
+
+overlays if="digitalocean" {
+    file destination="/boot/conf.d/console" source="files/boot_console.do"
+}
+</code></pre>
+<h2 id="combining-with-base-and-includes"><a class="header" href="#combining-with-base-and-includes">Combining with Base and Includes</a></h2>
+<p>Profiles work across the full composition chain. Conditional blocks in base specs and includes are filtered together with the current spec's blocks:</p>
+<pre><code class="language-kdl">// omnios-base.kdl
+packages if="build" {
+    package "/developer/build-essential"
+}
+</code></pre>
+<pre><code class="language-kdl">// my-image.kdl
+base "omnios-base.kdl"
+
+packages if="build" {
+    package "/ooce/developer/rust"
+}
+</code></pre>
+<p>Building with <code>--profile build</code> activates both blocks from both files.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="multi-stage-pipelines"><a class="header" href="#multi-stage-pipelines">Multi-Stage Pipelines</a></h1>
+<p>Forger's composability model enables multi-stage build pipelines where each stage's output feeds as input to the next. This is the key to fast, cacheable image builds.</p>
+<h2 id="the-pipeline-pattern"><a class="header" href="#the-pipeline-pattern">The Pipeline Pattern</a></h2>
+<p>A typical pipeline for a bootable OmniOS VM image looks like this:</p>
+<pre><code>Stage 1: Base (expensive, cached)
+  omnios-base.kdl
+    → Initializes IPS
+    → Sets publishers
+    → Installs core packages
+    → Produces: artifact (tar archive)
+
+Stage 2: Image (fast, incremental)
+  omnios-disk.kdl (base: omnios-base.kdl)
+    → Consumes base artifact
+    → Adds cloud-init, drivers
+    → Applies overlays (config files, device nodes)
+    → Produces: QCOW2 image
+</code></pre>
+<p>The first build runs both stages. Subsequent builds skip Stage 1 if the base hasn't changed, jumping straight to Stage 2.</p>
+<h2 id="designing-your-pipeline"><a class="header" href="#designing-your-pipeline">Designing Your Pipeline</a></h2>
+<h3 id="identify-the-cache-boundary"><a class="header" href="#identify-the-cache-boundary">Identify the Cache Boundary</a></h3>
+<p>The most expensive operation in image building is package installation — downloading and extracting hundreds of packages from a repository. Put this in the base spec:</p>
+<pre><code class="language-kdl">// omnios-base.kdl — the slow part, cached
+metadata name="omnios-base" version="1.0.0"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+incorporation "entire"
+
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+    package "/service/network/ntpsec"
+    package "/web/curl"
+    package "/web/wget"
+}
+</code></pre>
+<h3 id="derive-specific-images"><a class="header" href="#derive-specific-images">Derive Specific Images</a></h3>
+<p>Then create derivative specs that add target-specific configuration:</p>
+<pre><code class="language-kdl">// omnios-disk.kdl — fast, builds on cached base
+base "omnios-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+packages {
+    package "/system/cloud-init"
+    package "/driver/virtio/vioif"
+    package "/driver/virtio/vioblk"
+}
+
+overlays {
+    file destination="/boot/conf.d/console" source="files/boot_console.115200"
+    shadow username="root" password="$5$rounds=10000$..."
+}
+
+target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<h3 id="multiple-derivatives-from-one-base"><a class="header" href="#multiple-derivatives-from-one-base">Multiple Derivatives from One Base</a></h3>
+<pre><code>omnios-base.kdl
+  ├── omnios-disk.kdl          → QCOW2 VM image
+  ├── omnios-rust-ci.kdl       → Rust CI image (adds rust, git, build tools)
+  ├── omnios-container.kdl     → OCI container
+  └── omnios-aws.kdl           → AWS-specific VM image
+</code></pre>
+<p>Each derivative shares the same cached base, so building all four images only runs the expensive Stage 1 once.</p>
+<h2 id="comparison-with-predecessor-tools"><a class="header" href="#comparison-with-predecessor-tools">Comparison with Predecessor Tools</a></h2>
+<h3 id="omnios-image-builder-shell--json"><a class="header" href="#omnios-image-builder-shell--json">omnios-image-builder (Shell + JSON)</a></h3>
+<p>The old <code>omnios-image-builder</code> achieved the same pattern with ZFS snapshots:</p>
+<pre><code>01-strap.json  → pkg install entire → ZFS snapshot "strap"
+02-image.json  → pkg install extras → ZFS snapshot "image"
+03-archive.json → pack_tar → omnios-bloody.tar.gz
+aws.json       → unpack_tar + make_bootable → raw disk
+</code></pre>
+<p>Each ZFS snapshot was a cache point. The <code>-f</code> flag forced a full rebuild.</p>
+<p>Forger replaces this with the <code>base</code> directive. No ZFS on the build host required. No manual snapshot management. The caching is implicit in the spec relationship.</p>
+<h3 id="packer-hcl"><a class="header" href="#packer-hcl">Packer (HCL)</a></h3>
+<p>Packer has no native multi-stage caching. Each build starts from an ISO installation, runs provisioner scripts, and captures the result. There's no way to say "skip the OS install and start from here."</p>
+<p>Forger's pipeline model is fundamentally more efficient for iterative development.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="illumos-overview"><a class="header" href="#illumos-overview">illumos Overview</a></h1>
+<p>Forger's primary focus is the <strong>illumos</strong> ecosystem. This chapter provides essential background for image developers working with illumos distributions.</p>
+<h2 id="what-is-illumos"><a class="header" href="#what-is-illumos">What is illumos?</a></h2>
+<p>illumos is a Unix operating system kernel derived from OpenSolaris. It powers several distributions including OmniOS, OpenIndiana, and SmartOS. Key technologies that distinguish illumos from Linux:</p>
+<h3 id="zfs"><a class="header" href="#zfs">ZFS</a></h3>
+<p>ZFS is the default and recommended filesystem for illumos. It provides:</p>
+<ul>
+<li><strong>Copy-on-write</strong>: Snapshots and clones are instant and space-efficient</li>
+<li><strong>Boot Environments (BEs)</strong>: Multiple bootable system states on the same pool</li>
+<li><strong>Data integrity</strong>: End-to-end checksumming</li>
+<li><strong>Built-in compression</strong>: LZ4 by default on modern pools</li>
+</ul>
+<p>Forger creates ZFS pools natively for QCOW2 targets on illumos.</p>
+<h3 id="ips-image-packaging-system"><a class="header" href="#ips-image-packaging-system">IPS (Image Packaging System)</a></h3>
+<p>IPS is illumos's package manager. Key concepts:</p>
+<ul>
+<li><strong>Publishers</strong>: Named package repositories (e.g., <code>omnios</code>, <code>extra.omnios</code>)</li>
+<li><strong>Incorporations</strong>: Meta-packages that constrain version compatibility (e.g., <code>entire</code>)</li>
+<li><strong>Variants</strong>: Facets that select package subsets (e.g., <code>opensolaris.zone=global</code>)</li>
+<li><strong>FMRIs</strong>: Hierarchical package names (e.g., <code>/network/openssh-server</code>)</li>
+<li><strong>Signed packages</strong>: CA-verified package integrity</li>
+</ul>
+<p>Forger wraps IPS operations directly — no shell scripting needed.</p>
+<h3 id="smf-service-management-facility"><a class="header" href="#smf-service-management-facility">SMF (Service Management Facility)</a></h3>
+<p>SMF is illumos's service manager (similar to systemd on Linux, but predates it). Services are defined by XML manifests and managed via profiles:</p>
+<ul>
+<li><strong>Profiles</strong> control which services are enabled at boot</li>
+<li><strong>generic_limited_net.xml</strong>: Basic networking</li>
+<li><strong>inetd_generic.xml</strong>: Internet daemon services</li>
+<li><strong>platform_none.xml</strong>: Platform-specific (none for VM images)</li>
+<li><strong>ns_dns.xml</strong>: DNS name service</li>
+</ul>
+<p>Forger configures SMF profiles through symlink overlays:</p>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml"
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml"
+}
+</code></pre>
+<h3 id="zones"><a class="header" href="#zones">Zones</a></h3>
+<p>illumos zones are lightweight OS-level containers (similar to LXC/Docker, but predating both). The <code>opensolaris.zone</code> variant controls whether packages include global-zone-only components:</p>
+<ul>
+<li><code>global</code>: Full system including kernel modules, boot components, and hardware drivers</li>
+<li><code>nonglobal</code>: Zone-only packages (no kernel or hardware support)</li>
+</ul>
+<p>For VM images, always use <code>global</code>:</p>
+<pre><code class="language-kdl">variants {
+    set name="opensolaris.zone" value="global"
+}
+</code></pre>
+<h3 id="device-filesystem-devfs"><a class="header" href="#device-filesystem-devfs">Device Filesystem (devfs)</a></h3>
+<p>illumos manages device nodes through <code>devfsadm</code>, which discovers hardware and creates entries in <code>/dev</code>. For image building, this means:</p>
+<ol>
+<li>Clean up stale device nodes from the build environment</li>
+<li>Run <code>devfsadm</code> to create correct entries for the target hardware</li>
+<li>Ensure required directories exist (<code>/dev/dsk</code>, <code>/dev/rdsk</code>, <code>/dev/cfg</code>, <code>/dev/usb</code>)</li>
+</ol>
+<p>Forger handles this through the <code>devfsadm</code> overlay and the conventional <code>devfs.kdl</code> include.</p>
+<h2 id="illumos-distributions"><a class="header" href="#illumos-distributions">illumos Distributions</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Distribution</th><th>Focus</th><th>Publisher URL</th></tr></thead><tbody>
+<tr><td><strong>OmniOS</strong></td><td>Server/cloud, minimal, stable</td><td><code>pkg.omnios.org</code></td></tr>
+<tr><td><strong>OpenIndiana</strong></td><td>Desktop/general-purpose, broader package set</td><td><code>pkg.openindiana.org</code></td></tr>
+<tr><td><strong>SmartOS</strong></td><td>Hypervisor/container host (Joyent)</td><td>Not IPS-based</td></tr>
+</tbody></table>
+</div>
+<p>Forger currently supports OmniOS. OpenIndiana support follows the same IPS path.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="omnios"><a class="header" href="#omnios">OmniOS</a></h1>
+<p>OmniOS is Forger's primary target distribution. It's a server-focused illumos distribution maintained by the OmniOS Community Edition (OmniOSce) project.</p>
+<h2 id="release-branches"><a class="header" href="#release-branches">Release Branches</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Branch</th><th>URL Path</th><th>Use Case</th></tr></thead><tbody>
+<tr><td><strong>bloody</strong></td><td><code>/bloody/core/</code></td><td>Rolling development, latest packages</td></tr>
+<tr><td><strong>stable</strong> (e.g., r151050)</td><td><code>/r151050/core/</code></td><td>Production, LTS releases</td></tr>
+</tbody></table>
+</div>
+<h3 id="choosing-a-branch"><a class="header" href="#choosing-a-branch">Choosing a Branch</a></h3>
+<ul>
+<li>Use <strong>bloody</strong> for CI images, development, and testing the latest software</li>
+<li>Use <strong>stable</strong> for production deployments where predictability matters</li>
+</ul>
+<h2 id="minimal-spec"><a class="header" href="#minimal-spec">Minimal Spec</a></h2>
+<pre><code class="language-kdl">metadata name="omnios-base" version="1.0.0"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+incorporation "entire"
+
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+}
+</code></pre>
+<h3 id="required-elements"><a class="header" href="#required-elements">Required Elements</a></h3>
+<ul>
+<li><strong><code>incorporation "entire"</code></strong>: Pins all packages to a consistent version set. Without this, you may get incompatible package versions.</li>
+<li><strong><code>certificates</code></strong>: OmniOS packages are signed. The CA certificate file (<code>omniosce-ca.cert.pem</code>) must be available relative to the spec.</li>
+<li><strong><code>variants</code> with <code>opensolaris.zone=global</code></strong>: Required for bootable VM images. Omitting this may exclude kernel modules.</li>
+</ul>
+<h2 id="common-packages"><a class="header" href="#common-packages">Common Packages</a></h2>
+<h3 id="core-system"><a class="header" href="#core-system">Core System</a></h3>
+<pre><code class="language-kdl">packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+    package "/service/network/ntpsec"
+    package "/web/curl"
+    package "/web/wget"
+}
+</code></pre>
+<h3 id="cloud--virtualization"><a class="header" href="#cloud--virtualization">Cloud &amp; Virtualization</a></h3>
+<pre><code class="language-kdl">packages {
+    package "/system/cloud-init"
+    package "/driver/virtio/vioif"      // Virtio network
+    package "/driver/virtio/vioblk"     // Virtio block storage
+    package "/driver/virtio/vio9p"      // 9p filesystem sharing
+    package "/driver/virtio/vioscsi"    // Virtio SCSI
+    package "/driver/virtio/viorand"    // Virtio RNG
+}
+</code></pre>
+<h3 id="development"><a class="header" href="#development">Development</a></h3>
+<pre><code class="language-kdl">packages if="build" {
+    package "/developer/build-essential"
+    package "/ooce/developer/omnios-build-tools"
+    package "/developer/build/gnu-make"
+}
+</code></pre>
+<h3 id="rust-toolchain"><a class="header" href="#rust-toolchain">Rust Toolchain</a></h3>
+<pre><code class="language-kdl">packages if="rust" {
+    package "/ooce/developer/rust"
+    package "/developer/versioning/git"
+}
+</code></pre>
+<h2 id="boot-configuration"><a class="header" href="#boot-configuration">Boot Configuration</a></h2>
+<p>OmniOS VM images need console and boot configuration through overlays:</p>
+<h3 id="serial-console-115200-baud"><a class="header" href="#serial-console-115200-baud">Serial Console (115200 baud)</a></h3>
+<pre><code class="language-kdl">overlays {
+    file destination="/boot/conf.d/console" source="files/boot_console.115200"
+    file destination="/etc/ttydefs" source="files/ttydefs.115200"
+    file destination="/etc/default/init" source="files/default_init.utc"
+}
+</code></pre>
+<p>The boot console file configures which console device is used:</p>
+<ul>
+<li><strong><code>ttya</code></strong>: Serial console (standard for cloud VMs)</li>
+<li><strong><code>text</code></strong>: Framebuffer (for interactive debugging)</li>
+</ul>
+<h3 id="smf-profiles"><a class="header" href="#smf-profiles">SMF Profiles</a></h3>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml"
+    ensure-symlink "/etc/svc/profile/inetd_services.xml" target="inetd_generic.xml"
+    ensure-symlink "/etc/svc/profile/platform.xml" target="platform_none.xml"
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml"
+}
+</code></pre>
+<h2 id="qcow2-target-settings"><a class="header" href="#qcow2-target-settings">QCOW2 Target Settings</a></h2>
+<p>For OmniOS, always use ZFS with UEFI:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<ul>
+<li><strong><code>ashift=12</code></strong>: 4K sector alignment, correct for modern disks and virtual storage</li>
+<li><strong>UEFI</strong>: Standard boot method for OmniOS</li>
+</ul>
+<h2 id="complete-example-1"><a class="header" href="#complete-example-1">Complete Example</a></h2>
+<p>See <code>images/omnios-bloody-disk.kdl</code> in the repository for a full bootable OmniOS image spec, or the <a href="distros/../reference/examples.html">Example Specs</a> chapter.</p>
+<h2 id="omnios-extra-publisher"><a class="header" href="#omnios-extra-publisher">OmniOS Extra Publisher</a></h2>
+<p>The <code>extra.omnios</code> publisher provides community-maintained packages not in the core repository, including:</p>
+<ul>
+<li>Rust (<code>/ooce/developer/rust</code>)</li>
+<li>Go (<code>/ooce/developer/go</code>)</li>
+<li>Python versions (<code>/ooce/runtime/python-*</code>)</li>
+<li>Node.js (<code>/ooce/runtime/node-*</code>)</li>
+<li>Build tools (<code>/ooce/developer/omnios-build-tools</code>)</li>
+</ul>
+<p>Always add this publisher if you need development tools or language runtimes.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ubuntu"><a class="header" href="#ubuntu">Ubuntu</a></h1>
+<p>Ubuntu is Forger's secondary target, providing Linux support for teams that need both illumos and Linux images from the same tooling.</p>
+<h2 id="how-ubuntu-builds-differ"><a class="header" href="#how-ubuntu-builds-differ">How Ubuntu Builds Differ</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>OmniOS</th><th>Ubuntu</th></tr></thead><tbody>
+<tr><td>Bootstrap</td><td><code>pkg image-create</code></td><td><code>debootstrap</code></td></tr>
+<tr><td>Package manager</td><td>IPS (<code>pkg</code>)</td><td>APT (<code>apt</code>)</td></tr>
+<tr><td>Repository config</td><td>Publishers</td><td><code>sources.list</code></td></tr>
+<tr><td>Default filesystem</td><td>ZFS</td><td>ext4</td></tr>
+<tr><td>Bootloader</td><td>UEFI (illumos)</td><td><code>grub-efi-amd64-bin</code></td></tr>
+<tr><td>Init system</td><td>SMF</td><td>systemd</td></tr>
+</tbody></table>
+</div>
+<h2 id="minimal-spec-1"><a class="header" href="#minimal-spec-1">Minimal Spec</a></h2>
+<pre><code class="language-kdl">metadata name="ubuntu-base" version="1.0.0" description="Ubuntu 22.04 base"
+
+distro "ubuntu-22.04"
+
+repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+}
+
+packages {
+    package "openssh-server"
+    package "curl"
+}
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "grub-efi-amd64-bin"
+    filesystem "ext4"
+}
+</code></pre>
+<h3 id="key-differences-from-omnios"><a class="header" href="#key-differences-from-omnios">Key Differences from OmniOS</a></h3>
+<ul>
+<li><strong><code>distro "ubuntu-22.04"</code></strong> is required — without it, Forger assumes OmniOS</li>
+<li><strong>No incorporation, variants, or certificates</strong> — these are IPS concepts</li>
+<li><strong>Bootloader is <code>grub-efi-amd64-bin</code></strong> — the Ubuntu GRUB EFI package</li>
+<li><strong>Filesystem is <code>ext4</code></strong> — ZFS is possible but not the Ubuntu default</li>
+</ul>
+<h2 id="repositories"><a class="header" href="#repositories">Repositories</a></h2>
+<p>Ubuntu uses APT mirrors with suite and component selection:</p>
+<pre><code class="language-kdl">repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-updates" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-security" components="main universe"
+}
+</code></pre>
+<h3 id="components"><a class="header" href="#components">Components</a></h3>
+<ul>
+<li><strong>main</strong>: Officially supported free software</li>
+<li><strong>universe</strong>: Community-maintained free software</li>
+<li><strong>restricted</strong>: Proprietary drivers</li>
+<li><strong>multiverse</strong>: Non-free software</li>
+</ul>
+<p>For most server images, <code>main universe</code> covers all needed packages.</p>
+<h2 id="common-packages-1"><a class="header" href="#common-packages-1">Common Packages</a></h2>
+<h3 id="core-system-1"><a class="header" href="#core-system-1">Core System</a></h3>
+<pre><code class="language-kdl">packages {
+    package "openssh-server"
+    package "curl"
+    package "git"
+    package "cloud-init"
+    package "linux-image-generic"
+}
+</code></pre>
+<blockquote>
+<p><strong>Important</strong>: Include <code>linux-image-generic</code> for bootable VM images. Without a kernel, the image won't boot.</p>
+</blockquote>
+<h3 id="build-tools"><a class="header" href="#build-tools">Build Tools</a></h3>
+<pre><code class="language-kdl">packages if="build" {
+    package "build-essential"
+    package "pkg-config"
+    package "libssl-dev"
+}
+</code></pre>
+<h3 id="rust-toolchain-1"><a class="header" href="#rust-toolchain-1">Rust Toolchain</a></h3>
+<pre><code class="language-kdl">packages if="rust" {
+    package "rustc"
+    package "cargo"
+    package "build-essential"
+    package "libssl-dev"
+    package "pkg-config"
+}
+</code></pre>
+<h2 id="builder-vm"><a class="header" href="#builder-vm">Builder VM</a></h2>
+<p>Ubuntu builds need an Ubuntu builder VM. Specify it explicitly or let Forger use the default:</p>
+<pre><code class="language-kdl">builder {
+    image "oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+</code></pre>
+<h2 id="complete-example-2"><a class="header" href="#complete-example-2">Complete Example</a></h2>
+<pre><code class="language-kdl">metadata name="ubuntu-rust-ci" version="1.0.0" description="Ubuntu Rust CI image"
+
+distro "ubuntu-22.04"
+
+repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+}
+
+packages {
+    package "build-essential"
+    package "rustc"
+    package "cargo"
+    package "git"
+    package "curl"
+    package "openssh-server"
+    package "cloud-init"
+    package "linux-image-generic"
+    package "grub-efi-amd64-bin"
+    package "libssl-dev"
+    package "pkg-config"
+}
+
+customization {
+    user "ci"
+}
+
+builder {
+    image "oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "grub-efi-amd64-bin"
+    filesystem "ext4"
+    push-to "ghcr.io/cloudnebulaproject/ubuntu-rust:latest"
+}
+</code></pre>
+<h2 id="future-ips-on-linux"><a class="header" href="#future-ips-on-linux">Future: IPS on Linux</a></h2>
+<p>A long-term goal of the Forger project is to bring IPS to Linux via a Rust implementation. This would allow Linux images to use the same publisher-based, signed-package, incorporation-constrained model that makes illumos packaging robust. When this is available, Ubuntu and other Linux distros will gain IPS as an alternative package manager option within Forger.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="adding-a-new-distro"><a class="header" href="#adding-a-new-distro">Adding a New Distro</a></h1>
+<p>Forger's distro support is built around the <code>DistroFamily</code> abstraction. Adding a new distribution means extending this abstraction at the spec-parsing and build-engine levels.</p>
+<h2 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h2>
+<p>The distro system has three touch points:</p>
+<ol>
+<li><strong><code>spec-parser</code></strong>: Maps distro strings to <code>DistroFamily</code> enum</li>
+<li><strong><code>forge-engine</code> Phase 1</strong>: Distro-specific rootfs assembly logic</li>
+<li><strong><code>forge-builder</code></strong>: Default builder image selection</li>
+</ol>
+<h2 id="step-1-extend-the-distrofamily-enum"><a class="header" href="#step-1-extend-the-distrofamily-enum">Step 1: Extend the DistroFamily Enum</a></h2>
+<p>In <code>crates/spec-parser/src/lib.rs</code>, add your distro to the enum:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum DistroFamily {
+    OmniOS,
+    Ubuntu,
+    Fedora,   // New
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Update the detection logic that maps the <code>distro</code> string to a family:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn detect_family(distro: &amp;str) -&gt; DistroFamily {
+    if distro.starts_with("ubuntu") {
+        DistroFamily::Ubuntu
+    } else if distro.starts_with("fedora") {
+        DistroFamily::Fedora
+    } else {
+        DistroFamily::OmniOS
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="step-2-add-repository-type"><a class="header" href="#step-2-add-repository-type">Step 2: Add Repository Type</a></h2>
+<p>If your distro uses a different repository format, add it to the <code>repositories</code> parsing in the spec:</p>
+<pre><code class="language-kdl">repositories {
+    // Existing
+    publisher name="..." origin="..."    // IPS
+    apt-mirror "..." suite="..." components="..."  // APT
+
+    // New: DNF/YUM
+    dnf-repo name="fedora" baseurl="https://..." gpgkey="..."
+}
+</code></pre>
+<h2 id="step-3-implement-phase-1-logic"><a class="header" href="#step-3-implement-phase-1-logic">Step 3: Implement Phase 1 Logic</a></h2>
+<p>In <code>crates/forge-engine/src/phase1/mod.rs</code>, add the rootfs assembly path for your distro. This is the core work — each distro has its own bootstrap process:</p>
+<ul>
+<li><strong>OmniOS</strong>: <code>pkg image-create</code> → set publishers → install</li>
+<li><strong>Ubuntu</strong>: <code>debootstrap</code> → write sources.list → apt install</li>
+<li><strong>Fedora</strong>: <code>dnf --installroot</code> → write repo files → dnf install</li>
+</ul>
+<p>The key operations:</p>
+<ol>
+<li>Initialize a package manager root in the staging directory</li>
+<li>Configure repositories/mirrors</li>
+<li>Install the base package set</li>
+<li>Install user-specified packages</li>
+</ol>
+<h2 id="step-4-default-builder-image"><a class="header" href="#step-4-default-builder-image">Step 4: Default Builder Image</a></h2>
+<p>In <code>crates/forge-builder/src/lib.rs</code>, add a default builder image:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>match distro_family {
+    DistroFamily::OmniOS =&gt; "oci://ghcr.io/cloudnebulaproject/omnios-builder:latest",
+    DistroFamily::Ubuntu =&gt; "oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest",
+    DistroFamily::Fedora =&gt; "oci://ghcr.io/cloudnebulaproject/fedora-builder:latest",
+}
+<span class="boring">}</span></code></pre></pre>
+<p>You'll also need to build and publish the builder image itself.</p>
+<h2 id="step-5-add-example-specs"><a class="header" href="#step-5-add-example-specs">Step 5: Add Example Specs</a></h2>
+<p>Create example specs in the <code>images/</code> directory showing common patterns for the new distro.</p>
+<h2 id="step-6-document"><a class="header" href="#step-6-document">Step 6: Document</a></h2>
+<p>Add a chapter to this book under <strong>Distro Guide</strong> covering:</p>
+<ul>
+<li>Required and recommended packages</li>
+<li>Repository configuration</li>
+<li>Filesystem and bootloader defaults</li>
+<li>Any distro-specific overlay patterns</li>
+</ul>
+<h2 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h2>
+<p>When adding a distro, keep these principles in mind:</p>
+<ul>
+<li><strong>The <code>ToolRunner</code> trait</strong> wraps all external tool execution. Use it for any new package manager commands — this enables testing without root access.</li>
+<li><strong>Phase 1 is distro-specific, Phase 2 is not</strong>. The QCOW2/OCI/artifact target production is shared across all distros. Only rootfs assembly changes.</li>
+<li><strong>Filesystem defaults</strong> should match what the distro community expects (ZFS for illumos, ext4 for most Linux).</li>
+<li><strong>Error messages</strong> should use miette diagnostics to tell the user exactly what's wrong and how to fix it.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="qcow2-vm-images"><a class="header" href="#qcow2-vm-images">QCOW2 VM Images</a></h1>
+<p>QCOW2 (QEMU Copy-On-Write v2) is the primary output format for bootable virtual machine images.</p>
+<h2 id="how-qcow2-targets-work"><a class="header" href="#how-qcow2-targets-work">How QCOW2 Targets Work</a></h2>
+<p>Phase 2 for a QCOW2 target follows this sequence:</p>
+<ol>
+<li><strong>Create a raw disk</strong> of the specified size</li>
+<li><strong>Attach via loopback device</strong> (or equivalent)</li>
+<li><strong>Create filesystem</strong>:
+<ul>
+<li><strong>ZFS</strong>: Create pool → create boot environment dataset → mount</li>
+<li><strong>ext4</strong>: Partition disk → format → mount</li>
+</ul>
+</li>
+<li><strong>Populate</strong> from Phase 1 rootfs (copy files into mounted filesystem)</li>
+<li><strong>Install bootloader</strong> (UEFI or GRUB)</li>
+<li><strong>Finalize</strong>:
+<ul>
+<li>ZFS: Set bootfs property → unmount → export pool</li>
+<li>ext4: Unmount</li>
+</ul>
+</li>
+<li><strong>Detach</strong> loopback device</li>
+<li><strong>Convert</strong> raw disk to QCOW2 via <code>qemu-img convert</code></li>
+</ol>
+<h2 id="zfs-based-images-illumos"><a class="header" href="#zfs-based-images-illumos">ZFS-Based Images (illumos)</a></h2>
+<p>ZFS is the default and recommended filesystem for OmniOS images:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "2G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<h3 id="zfs-pool-details"><a class="header" href="#zfs-pool-details">ZFS Pool Details</a></h3>
+<p>During build, Forger creates a uniquely-named ZFS pool (e.g., <code>forgebuild_12345</code>) to avoid conflicts with existing pools on the build host. After export, the pool is named <code>rpool</code> in the final image.</p>
+<h3 id="pool-properties"><a class="header" href="#pool-properties">Pool Properties</a></h3>
+<pre><code class="language-kdl">pool {
+    property name="ashift" value="12"
+}
+</code></pre>
+<ul>
+<li><strong><code>ashift=12</code></strong>: 4KB sector alignment. Use this for modern storage and virtual disks.</li>
+<li>Additional ZFS pool properties can be set using the same syntax.</li>
+</ul>
+<h3 id="boot-environments"><a class="header" href="#boot-environments">Boot Environments</a></h3>
+<p>ZFS images use boot environments (BEs), a core illumos concept. The image contains a single BE that becomes the default boot target. On first boot, the system can create new BEs for upgrades, allowing rollback to previous states.</p>
+<h2 id="ext4-based-images-linux"><a class="header" href="#ext4-based-images-linux">ext4-Based Images (Linux)</a></h2>
+<p>ext4 is the default filesystem for Ubuntu images:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "grub-efi-amd64-bin"
+    filesystem "ext4"
+}
+</code></pre>
+<p>The disk is partitioned with an EFI System Partition and a root partition formatted as ext4.</p>
+<h2 id="disk-sizing"><a class="header" href="#disk-sizing">Disk Sizing</a></h2>
+<p>Specify the disk size as a string with a unit suffix:</p>
+<pre><code class="language-kdl">disk-size "2G"       // 2 gigabytes
+disk-size "2000M"    // 2000 megabytes
+disk-size "8G"       // 8 gigabytes
+</code></pre>
+<p>Choose a size that accommodates your installed packages plus reasonable free space. Typical sizes:</p>
+<ul>
+<li>Minimal OmniOS: 2G</li>
+<li>OmniOS with development tools: 4-8G</li>
+<li>Ubuntu with build tools: 8G</li>
+</ul>
+<h2 id="bootloader-options-1"><a class="header" href="#bootloader-options-1">Bootloader Options</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Value</th><th>Platform</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>uefi</code></td><td>illumos</td><td>Native UEFI boot (recommended for OmniOS)</td></tr>
+<tr><td><code>grub</code></td><td>illumos</td><td>Legacy GRUB (BIOS boot)</td></tr>
+<tr><td><code>grub-efi-amd64-bin</code></td><td>Ubuntu</td><td>GRUB EFI for x86_64 Linux</td></tr>
+</tbody></table>
+</div>
+<h2 id="auto-push-1"><a class="header" href="#auto-push-1">Auto-Push</a></h2>
+<p>QCOW2 images can be automatically pushed to an OCI registry as artifacts:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    filesystem "zfs"
+    push-to "ghcr.io/myorg/omnios-image:latest"
+}
+</code></pre>
+<p>The QCOW2 file is wrapped as an OCI artifact with custom media types (<code>application/vnd.cloudnebula.qcow2.*</code>) and pushed to the registry. This allows distributing VM images through container registries.</p>
+<h2 id="deploying-qcow2-images"><a class="header" href="#deploying-qcow2-images">Deploying QCOW2 Images</a></h2>
+<p>QCOW2 images work with:</p>
+<ul>
+<li><strong>QEMU/KVM</strong>: Direct use (<code>qemu-system-x86_64 -drive file=image.qcow2,format=qcow2</code>)</li>
+<li><strong>libvirt/virt-manager</strong>: Import as existing disk</li>
+<li><strong>Proxmox</strong>: Upload to storage, create VM from disk</li>
+<li><strong>Cloud platforms</strong>: Convert to platform-specific format if needed</li>
+</ul>
+<p>To convert to raw (for AWS, DigitalOcean, etc.):</p>
+<pre><code class="language-bash">qemu-img convert -f qcow2 -O raw image.qcow2 image.raw
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oci-container-images"><a class="header" href="#oci-container-images">OCI Container Images</a></h1>
+<p>OCI targets produce container images compatible with Docker, Podman, and any OCI-compliant runtime.</p>
+<h2 id="syntax-4"><a class="header" href="#syntax-4">Syntax</a></h2>
+<pre><code class="language-kdl">target "container" kind="oci" {
+    entrypoint command="/bin/sh"
+    environment {
+        set "PATH" "/usr/bin:/bin:/usr/sbin:/sbin"
+        set "TZ" "UTC"
+    }
+}
+</code></pre>
+<h2 id="how-oci-targets-work"><a class="header" href="#how-oci-targets-work">How OCI Targets Work</a></h2>
+<p>Phase 2 for an OCI target:</p>
+<ol>
+<li><strong>Compress</strong> the Phase 1 rootfs into a gzip tar layer</li>
+<li><strong>Compute</strong> SHA256 digests for all blobs</li>
+<li><strong>Build</strong> OCI config JSON (entrypoint, environment, layer diff IDs)</li>
+<li><strong>Build</strong> OCI manifest JSON (media types, blob references, sizes)</li>
+<li><strong>Write</strong> an OCI Image Layout directory:</li>
+</ol>
+<pre><code>output/container/
+├── oci-layout          # {"imageLayoutVersion": "1.0.0"}
+├── index.json          # Points to manifest
+└── blobs/
+    └── sha256/
+        ├── &lt;manifest&gt;  # OCI manifest JSON
+        ├── &lt;config&gt;    # OCI config JSON
+        └── &lt;layer&gt;     # Compressed rootfs layer
+</code></pre>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<h3 id="entrypoint"><a class="header" href="#entrypoint">Entrypoint</a></h3>
+<p>The command to run when the container starts:</p>
+<pre><code class="language-kdl">entrypoint command="/usr/sbin/sshd"
+</code></pre>
+<p>If omitted, no entrypoint is set and the container runtime's default applies.</p>
+<h3 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h3>
+<pre><code class="language-kdl">environment {
+    set "PATH" "/usr/bin:/bin:/usr/sbin:/sbin"
+    set "LANG" "C.UTF-8"
+    set "TZ" "UTC"
+}
+</code></pre>
+<h2 id="using-the-output"><a class="header" href="#using-the-output">Using the Output</a></h2>
+<h3 id="load-into-docker"><a class="header" href="#load-into-docker">Load into Docker</a></h3>
+<pre><code class="language-bash"># From OCI Image Layout directory
+docker load &lt; output/container/
+
+# Or use skopeo
+skopeo copy oci:output/container docker-daemon:myimage:latest
+</code></pre>
+<h3 id="load-into-podman"><a class="header" href="#load-into-podman">Load into Podman</a></h3>
+<pre><code class="language-bash">podman load &lt; output/container/
+</code></pre>
+<h3 id="push-to-registry"><a class="header" href="#push-to-registry">Push to Registry</a></h3>
+<p>Use the <code>push</code> command or <code>push-to</code> in the target:</p>
+<pre><code class="language-bash">forger push --image output/container/ --reference ghcr.io/myorg/myimage:latest
+</code></pre>
+<p>Or configure auto-push in the spec (see <a href="formats/./registry.html">OCI Registry Push</a>).</p>
+<h2 id="omnios-containers"><a class="header" href="#omnios-containers">OmniOS Containers</a></h2>
+<p>OmniOS in a container is useful for CI builds and lightweight services:</p>
+<pre><code class="language-kdl">metadata name="omnios-container" version="1.0.0"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+}
+
+incorporation "entire"
+
+variants {
+    set name="opensolaris.zone" value="nonglobal"
+}
+
+packages {
+    package "/editor/vim"
+    package "/web/curl"
+}
+
+target "container" kind="oci" {
+    entrypoint command="/bin/bash"
+    environment {
+        set "PATH" "/usr/bin:/bin:/usr/sbin:/sbin"
+    }
+}
+</code></pre>
+<p>Note: For containers, use <code>opensolaris.zone=nonglobal</code> to exclude kernel modules and hardware drivers that aren't needed in a container context.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="tar-artifacts"><a class="header" href="#tar-artifacts">Tar Artifacts</a></h1>
+<p>Artifact targets produce a tar archive of the assembled rootfs. This is the simplest output format and serves as the building block for multi-stage pipelines.</p>
+<h2 id="syntax-5"><a class="header" href="#syntax-5">Syntax</a></h2>
+<pre><code class="language-kdl">target "archive" kind="artifact" {
+}
+</code></pre>
+<h2 id="use-cases-1"><a class="header" href="#use-cases-1">Use Cases</a></h2>
+<h3 id="build-stage-caching"><a class="header" href="#build-stage-caching">Build Stage Caching</a></h3>
+<p>The primary use of artifacts is as intermediate outputs in a <a href="formats/../composability/pipelines.html">multi-stage pipeline</a>. A parent spec produces an artifact that a child spec consumes:</p>
+<pre><code class="language-kdl">// base.kdl — produces artifact
+target "base-archive" kind="artifact" {
+}
+</code></pre>
+<pre><code class="language-kdl">// disk.kdl — consumes artifact from base
+base "base.kdl"
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+}
+</code></pre>
+<h3 id="external-processing"><a class="header" href="#external-processing">External Processing</a></h3>
+<p>Artifacts can be consumed by external tools for further processing:</p>
+<ul>
+<li>Import into a zone or container manually</li>
+<li>Feed into another build system</li>
+<li>Archive for distribution</li>
+</ul>
+<h3 id="rootfs-inspection"><a class="header" href="#rootfs-inspection">Rootfs Inspection</a></h3>
+<p>Build an artifact to inspect what the rootfs looks like without committing to a disk image:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --target archive
+tar -tzf output/archive.tar.gz | head -50
+</code></pre>
+<h2 id="output"><a class="header" href="#output">Output</a></h2>
+<p>The artifact is written to the output directory as a tar archive (typically gzip-compressed). The archive contains the full rootfs tree starting from <code>/</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oci-registry-push"><a class="header" href="#oci-registry-push">OCI Registry Push</a></h1>
+<p>Forger can push built images directly to OCI-compliant registries, including GitHub Container Registry (GHCR), Docker Hub, and self-hosted registries.</p>
+<h2 id="auto-push-target-configuration"><a class="header" href="#auto-push-target-configuration">Auto-Push (Target Configuration)</a></h2>
+<p>Set <code>push-to</code> on a target to automatically push after a successful build:</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    push-to "ghcr.io/myorg/omnios-image:latest"
+}
+
+target "container" kind="oci" {
+    push-to "ghcr.io/myorg/omnios-container:latest"
+}
+</code></pre>
+<p>Skip the push with:</p>
+<pre><code class="language-bash">forger build --spec my-image.kdl --skip-push
+</code></pre>
+<h2 id="manual-push"><a class="header" href="#manual-push">Manual Push</a></h2>
+<p>Push a previously built image:</p>
+<pre><code class="language-bash"># Push OCI Image Layout
+forger push --image output/container/ --reference ghcr.io/myorg/myimage:latest
+
+# Push QCOW2 as OCI artifact
+forger push --image output/vm.qcow2 --reference ghcr.io/myorg/myvm:latest --artifact
+</code></pre>
+<h3 id="options"><a class="header" href="#options">Options</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--image &lt;PATH&gt;</code></td><td>Path to OCI Image Layout directory or QCOW2 file</td></tr>
+<tr><td><code>--reference &lt;REF&gt;</code></td><td>Registry reference (e.g., <code>ghcr.io/org/image:tag</code>)</td></tr>
+<tr><td><code>--artifact</code></td><td>Push QCOW2 as OCI artifact (custom media types)</td></tr>
+<tr><td><code>--auth-file &lt;PATH&gt;</code></td><td>JSON auth file for registry authentication</td></tr>
+</tbody></table>
+</div>
+<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
+<h3 id="github-container-registry-ghcr"><a class="header" href="#github-container-registry-ghcr">GitHub Container Registry (GHCR)</a></h3>
+<p>Forger automatically uses the <code>GITHUB_TOKEN</code> environment variable when pushing to <code>ghcr.io</code>:</p>
+<pre><code class="language-bash">export GITHUB_TOKEN=ghp_...
+forger build --spec my-image.kdl
+</code></pre>
+<p>In GitHub Actions, the token is available automatically:</p>
+<pre><code class="language-yaml">- name: Build and push
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: forger build --spec images/omnios-rust-ci.kdl
+</code></pre>
+<h3 id="auth-file"><a class="header" href="#auth-file">Auth File</a></h3>
+<p>For other registries, provide a JSON auth file:</p>
+<pre><code class="language-json">{
+    "username": "myuser",
+    "password": "mypassword"
+}
+</code></pre>
+<p>Or with a token:</p>
+<pre><code class="language-json">{
+    "token": "my-registry-token"
+}
+</code></pre>
+<pre><code class="language-bash">forger push --image output/container/ \
+  --reference registry.example.com/myimage:latest \
+  --auth-file auth.json
+</code></pre>
+<h3 id="anonymous-push"><a class="header" href="#anonymous-push">Anonymous Push</a></h3>
+<p>Local registries (localhost, 127.0.0.1) are accessed without authentication over HTTP (insecure mode).</p>
+<h2 id="qcow2-as-oci-artifact"><a class="header" href="#qcow2-as-oci-artifact">QCOW2 as OCI Artifact</a></h2>
+<p>When pushing QCOW2 images with <code>--artifact</code>, Forger uses custom OCI media types:</p>
+<ul>
+<li>Config: <code>application/vnd.cloudnebula.qcow2.config.v1+json</code></li>
+<li>Layer: <code>application/vnd.cloudnebula.qcow2.layer.v1</code></li>
+</ul>
+<p>This allows distributing VM disk images through container registries alongside container images, using a unified registry infrastructure.</p>
+<h2 id="pulling-qcow2-artifacts"><a class="header" href="#pulling-qcow2-artifacts">Pulling QCOW2 Artifacts</a></h2>
+<p>QCOW2 artifacts pushed to a registry can be pulled back as builder images or for deployment:</p>
+<pre><code class="language-kdl">builder {
+    image "oci://ghcr.io/myorg/omnios-builder:latest"
+}
+</code></pre>
+<p>Forger resolves <code>oci://</code> references by pulling from the registry.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="design-overview"><a class="header" href="#design-overview">Design Overview</a></h1>
+<p>Refraction Forger is designed around three principles: <strong>declarative specs</strong>, <strong>two-phase execution</strong>, and <strong>distro abstraction</strong>.</p>
+<h2 id="high-level-architecture"><a class="header" href="#high-level-architecture">High-Level Architecture</a></h2>
+<pre><code>                    ┌─────────────┐
+                    │  KDL Spec   │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │ spec-parser │  Parse → Resolve → Filter
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │   forger    │  CLI routing
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              │                         │
+       ┌──────▼──────┐          ┌──────▼──────┐
+       │ Local Build  │          │forge-builder│
+       └──────┬──────┘          └──────┬──────┘
+              │                         │
+              │                  Ephemeral VM
+              │                  ┌─────────────┐
+              │                  │  SSH + SCP   │
+              │                  └──────┬──────┘
+              │                         │
+       ┌──────▼─────────────────────────▼──────┐
+       │            forge-engine                │
+       │  ┌──────────┐     ┌─────────────────┐ │
+       │  │ Phase 1   │────▶│    Phase 2      │ │
+       │  │ Rootfs    │     │ QCOW2/OCI/Tar  │ │
+       │  └──────────┘     └────────┬────────┘ │
+       └────────────────────────────┼──────────┘
+                                    │
+                             ┌──────▼──────┐
+                             │  forge-oci  │  Registry push
+                             └─────────────┘
+</code></pre>
+<h2 id="key-design-decisions"><a class="header" href="#key-design-decisions">Key Design Decisions</a></h2>
+<h3 id="declarative-over-imperative"><a class="header" href="#declarative-over-imperative">Declarative Over Imperative</a></h3>
+<p>The old tools used shell scripts to orchestrate builds — ordering mattered, error handling was manual, and reuse required copy-paste. Forger uses a declarative spec where you describe <em>what</em> the image should contain, and the engine handles <em>how</em>.</p>
+<h3 id="direct-assembly-over-installation"><a class="header" href="#direct-assembly-over-installation">Direct Assembly Over Installation</a></h3>
+<p>Packer boots an ISO, types keystrokes into a virtual console, and waits for an installer to finish. Forger calls the package manager directly to assemble a rootfs, skipping the installer entirely. This is faster and more reliable.</p>
+<h3 id="host-independence"><a class="header" href="#host-independence">Host Independence</a></h3>
+<p>The old <code>omnios-image-builder</code> required an illumos host with ZFS and pfexec. Forger can build from any platform by spinning up an ephemeral builder VM. The build environment is part of the spec, not a prerequisite.</p>
+<h3 id="oci-as-distribution-channel"><a class="header" href="#oci-as-distribution-channel">OCI as Distribution Channel</a></h3>
+<p>Instead of custom upload scripts for each cloud provider, Forger uses OCI registries as a universal distribution mechanism. VM images, container images, and tar artifacts all flow through the same registry infrastructure.</p>
+<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<p>Forger uses <a href="https://docs.rs/miette">miette</a> for rich error diagnostics. When something fails, you get:</p>
+<ul>
+<li>The error message</li>
+<li>Context about what was being attempted</li>
+<li>Suggestions for how to fix it</li>
+<li>Source location where the error originated</li>
+</ul>
+<p>This is deliberate — image building involves many external tools and system operations, and clear error messages are essential for debugging.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="two-phase-build-pipeline"><a class="header" href="#two-phase-build-pipeline">Two-Phase Build Pipeline</a></h1>
+<p>Every Forger build follows a two-phase architecture. Understanding this split is key to building efficient images and debugging build failures.</p>
+<h2 id="phase-1-rootfs-assembly"><a class="header" href="#phase-1-rootfs-assembly">Phase 1: Rootfs Assembly</a></h2>
+<p>Phase 1 creates a populated filesystem tree in a staging directory. The work is entirely distro-specific:</p>
+<h3 id="omnios-path"><a class="header" href="#omnios-path">OmniOS Path</a></h3>
+<ol>
+<li><code>pkg image-create</code> — Initialize an IPS package image</li>
+<li><code>pkg set-publisher</code> — Configure each publisher (name + origin URL)</li>
+<li><code>pkg change-variant</code> — Set zone variant (<code>global</code> or <code>nonglobal</code>)</li>
+<li><code>pkg approve-ca-cert</code> — Trust CA certificates for signed packages</li>
+<li><code>pkg install</code> — Install all specified packages</li>
+<li>Apply customizations (create users)</li>
+<li>Apply overlays (files, directories, symlinks, shadow passwords, devfsadm)</li>
+</ol>
+<h3 id="ubuntu-path"><a class="header" href="#ubuntu-path">Ubuntu Path</a></h3>
+<ol>
+<li><code>debootstrap</code> — Bootstrap a minimal Debian/Ubuntu rootfs</li>
+<li>Write <code>/etc/apt/sources.list</code> from repository configuration</li>
+<li><code>apt update</code> — Refresh package lists</li>
+<li><code>apt install</code> — Install all specified packages</li>
+<li>Apply customizations and overlays (same as OmniOS)</li>
+</ol>
+<h3 id="output-1"><a class="header" href="#output-1">Output</a></h3>
+<p>Phase 1 produces a staging directory containing a complete rootfs. This directory is consumed by Phase 2.</p>
+<h2 id="phase-2-target-production"><a class="header" href="#phase-2-target-production">Phase 2: Target Production</a></h2>
+<p>Phase 2 takes the rootfs from Phase 1 and packages it into the requested output format. This logic is <strong>shared across all distros</strong>.</p>
+<h3 id="qcow2-path"><a class="header" href="#qcow2-path">QCOW2 Path</a></h3>
+<pre><code>Create raw disk file (specified size)
+  → Attach as loopback device
+    → ZFS: create pool → create BE dataset → mount
+    → ext4: partition → format → mount
+      → Copy rootfs into mounted filesystem
+        → Install bootloader (UEFI/GRUB)
+          → ZFS: set bootfs → unmount → export pool
+          → ext4: unmount
+            → Detach loopback
+              → qemu-img convert raw → qcow2
+</code></pre>
+<p>The ZFS path creates a unique pool name during build (e.g., <code>forgebuild_12345</code>) and renames to <code>rpool</code> after export. This prevents conflicts with existing pools on the build host.</p>
+<h3 id="oci-path"><a class="header" href="#oci-path">OCI Path</a></h3>
+<pre><code>Compress rootfs → tar.gz layer
+  → Compute SHA256 digest
+    → Build OCI config JSON (entrypoint, env)
+      → Build OCI manifest JSON
+        → Write OCI Image Layout directory
+</code></pre>
+<h3 id="artifact-path"><a class="header" href="#artifact-path">Artifact Path</a></h3>
+<pre><code>Create tar archive from rootfs
+</code></pre>
+<h2 id="why-two-phases"><a class="header" href="#why-two-phases">Why Two Phases?</a></h2>
+<p>The split serves several purposes:</p>
+<ol>
+<li><strong>Separation of concerns</strong>: Distro-specific logic (Phase 1) doesn't leak into format-specific logic (Phase 2)</li>
+<li><strong>Multiple targets</strong>: One Phase 1 rootfs can produce QCOW2, OCI, and artifact targets without rebuilding</li>
+<li><strong>Caching boundary</strong>: The base/child relationship creates a cache point between Phase 1 and Phase 2</li>
+<li><strong>Testability</strong>: Each phase can be tested independently</li>
+</ol>
+<h2 id="error-recovery"><a class="header" href="#error-recovery">Error Recovery</a></h2>
+<p>If Phase 2 fails (e.g., disk too small, bootloader installation error), Forger cleans up:</p>
+<ul>
+<li>Unmounts filesystems</li>
+<li>Exports ZFS pools</li>
+<li>Detaches loopback devices</li>
+<li>Removes temporary files</li>
+</ul>
+<p>Cleanup runs even on failure, preventing resource leaks on the build host.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="crate-structure"><a class="header" href="#crate-structure">Crate Structure</a></h1>
+<p>Forger is a Cargo workspace with five crates, each with a clear responsibility.</p>
+<h2 id="workspace-layout"><a class="header" href="#workspace-layout">Workspace Layout</a></h2>
+<pre><code>crates/
+├── forger/          CLI entry point
+├── spec-parser/     KDL parsing and resolution
+├── forge-engine/    Build execution (Phase 1 + Phase 2)
+├── forge-builder/   Remote VM builds
+└── forge-oci/       OCI image and registry operations
+</code></pre>
+<h2 id="forger-cli"><a class="header" href="#forger-cli">forger (CLI)</a></h2>
+<p>The binary crate. Defines five subcommands via clap:</p>
+<div class="table-wrapper"><table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>build</code></td><td>Build image from spec</td></tr>
+<tr><td><code>validate</code></td><td>Parse and check a spec</td></tr>
+<tr><td><code>inspect</code></td><td>Show resolved, profile-filtered spec</td></tr>
+<tr><td><code>push</code></td><td>Push artifact to OCI registry</td></tr>
+<tr><td><code>targets</code></td><td>List targets in a spec</td></tr>
+</tbody></table>
+</div>
+<p>This crate is thin — it parses CLI arguments and delegates to the library crates.</p>
+<h2 id="spec-parser"><a class="header" href="#spec-parser">spec-parser</a></h2>
+<p>Handles everything related to KDL spec files:</p>
+<ul>
+<li><strong>Parsing</strong>: Uses the <code>knuffel</code> crate to deserialize KDL into Rust structs (<code>ImageSpec</code>, <code>Target</code>, <code>Package</code>, etc.)</li>
+<li><strong>Resolution</strong>: Recursively resolves <code>base</code> and <code>include</code> references, merging specs while detecting circular dependencies</li>
+<li><strong>Profile filtering</strong>: Removes conditional blocks that don't match active profiles</li>
+</ul>
+<p>Key types:</p>
+<ul>
+<li><code>ImageSpec</code> — Root spec structure</li>
+<li><code>DistroFamily</code> — Enum discriminating OmniOS vs Ubuntu</li>
+<li><code>Target</code> / <code>TargetKind</code> — Output target definitions</li>
+<li><code>Overlays</code> — File operations (file, ensure-dir, ensure-symlink, shadow, devfsadm, remove-files)</li>
+</ul>
+<h2 id="forge-engine"><a class="header" href="#forge-engine">forge-engine</a></h2>
+<p>The build engine implementing both phases:</p>
+<ul>
+<li><strong>Phase 1</strong> (<code>phase1/mod.rs</code>): Distro-specific rootfs assembly
+<ul>
+<li>IPS operations for OmniOS</li>
+<li>debootstrap + APT for Ubuntu</li>
+<li>Overlay application (shared across distros)</li>
+</ul>
+</li>
+<li><strong>Phase 2</strong> (<code>phase2/mod.rs</code>): Target production
+<ul>
+<li><code>qcow2_zfs.rs</code>: ZFS pool creation, BE management</li>
+<li><code>qcow2_ext4.rs</code>: Partitioning, ext4 formatting</li>
+<li>OCI image layout creation</li>
+<li>Tar artifact packaging</li>
+</ul>
+</li>
+</ul>
+<p>Key abstraction: <strong><code>ToolRunner</code> trait</strong> — wraps all external tool execution (<code>pkg</code>, <code>apt</code>, <code>qemu-img</code>, <code>zfs</code>, <code>parted</code>, etc.) through a single interface. The real implementation (<code>SystemToolRunner</code>) uses <code>tokio::process::Command</code>. This trait enables testing without root access.</p>
+<h2 id="forge-builder"><a class="header" href="#forge-builder">forge-builder</a></h2>
+<p>Manages remote builds via ephemeral VMs:</p>
+<ol>
+<li>Resolve builder image (OCI ref, URL, or path)</li>
+<li>Generate ephemeral SSH keypair</li>
+<li>Create cloud-init config</li>
+<li>Start QEMU via <code>vm-manager</code> crate (user-mode networking)</li>
+<li>SSH connect with retry (up to 120s)</li>
+<li>Transfer forger binary + spec + files via SCP</li>
+<li>Execute remote build via SSH</li>
+<li>Download artifacts</li>
+<li>Destroy VM (guaranteed cleanup)</li>
+</ol>
+<p>Uses the external <code>vm-manager</code> crate for hypervisor abstraction (<code>RouterHypervisor</code> auto-detects QEMU/bhyve).</p>
+<h2 id="forge-oci"><a class="header" href="#forge-oci">forge-oci</a></h2>
+<p>OCI-specific operations:</p>
+<ul>
+<li><strong>tar_layer</strong>: Compress rootfs into gzip layer</li>
+<li><strong>manifest</strong>: Build OCI config and manifest JSON</li>
+<li><strong>layout</strong>: Write OCI Image Layout directory structure</li>
+<li><strong>artifact</strong>: Package QCOW2 as OCI artifact with custom media types</li>
+<li><strong>registry</strong>: Push to OCI registries (token auth, basic auth, anonymous)</li>
+<li><strong>AuthConfig</strong>: GHCR token auto-detection, auth file parsing</li>
+</ul>
+<h2 id="dependency-flow"><a class="header" href="#dependency-flow">Dependency Flow</a></h2>
+<pre><code>forger
+  ├── spec-parser
+  ├── forge-engine
+  │     └── spec-parser
+  ├── forge-builder
+  │     ├── spec-parser
+  │     └── vm-manager (external)
+  └── forge-oci
+</code></pre>
+<p>All crates are async (tokio) and use miette for error diagnostics.</p>
+<h2 id="key-external-dependencies"><a class="header" href="#key-external-dependencies">Key External Dependencies</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Category</th><th>Crate</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>KDL parsing</td><td><code>knuffel</code> 3.2</td><td>Spec deserialization</td></tr>
+<tr><td>CLI</td><td><code>clap</code> 4.5</td><td>Argument parsing</td></tr>
+<tr><td>Async</td><td><code>tokio</code> 1</td><td>Runtime, process, fs</td></tr>
+<tr><td>OCI</td><td><code>oci-spec</code>, <code>oci-client</code></td><td>Image spec, registry client</td></tr>
+<tr><td>SSH</td><td><code>ssh2</code></td><td>Remote builder communication</td></tr>
+<tr><td>Errors</td><td><code>miette</code>, <code>thiserror</code></td><td>Rich diagnostics</td></tr>
+<tr><td>VM</td><td><code>vm-manager</code> (path dep)</td><td>Hypervisor abstraction</td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="remote-builder-vms"><a class="header" href="#remote-builder-vms">Remote Builder VMs</a></h1>
+<p>When the build host doesn't match the target OS, Forger delegates to an ephemeral builder VM. This chapter explains the internals.</p>
+<h2 id="lifecycle"><a class="header" href="#lifecycle">Lifecycle</a></h2>
+<pre><code>1. Image Resolution
+   ├── OCI reference → pull from registry
+   ├── URL → download
+   └── Local path → use directly
+
+2. Cloud-Init Generation
+   ├── Generate ephemeral Ed25519 SSH keypair
+   ├── Create user-data: builder user, SSH key, passwordless sudo
+   └── Create cloud-init ISO
+
+3. VM Creation
+   ├── Create VmSpec (CPU, memory, disk, network)
+   ├── Network: user-mode (SLIRP) — no root required
+   ├── Disk: overlay on builder image (20GB default)
+   └── Hypervisor: auto-detect via vm-manager
+
+4. Boot &amp; Connect
+   ├── Start VM via hypervisor
+   └── SSH retry loop (up to 120 seconds)
+
+5. Transfer
+   ├── Upload forger binary via SCP
+   ├── Upload spec files via SCP
+   └── Upload overlay files via SCP
+
+6. Build
+   └── Execute forger build command via SSH
+
+7. Download
+   └── Retrieve artifacts via SCP
+
+8. Teardown (guaranteed, even on failure)
+   └── Destroy VM via hypervisor
+</code></pre>
+<h2 id="user-mode-networking"><a class="header" href="#user-mode-networking">User-Mode Networking</a></h2>
+<p>Builder VMs use QEMU's user-mode networking (SLIRP). This means:</p>
+<ul>
+<li><strong>No root access</strong> needed on the host</li>
+<li><strong>No bridge interfaces</strong> to configure</li>
+<li><strong>No firewall rules</strong> to manage</li>
+<li>Guest can access the internet through NAT</li>
+<li>Host communicates with guest via port forwarding</li>
+</ul>
+<p>DNS is automatically configured if needed.</p>
+<h2 id="security-model"><a class="header" href="#security-model">Security Model</a></h2>
+<ul>
+<li>SSH keys are <strong>ephemeral</strong> — generated per build, discarded after</li>
+<li>The builder user has <strong>passwordless sudo</strong> but only exists for the build duration</li>
+<li>The VM is <strong>destroyed</strong> after every build, even on failure</li>
+<li>No persistent state from previous builds leaks into new ones</li>
+</ul>
+<h2 id="custom-builder-images"><a class="header" href="#custom-builder-images">Custom Builder Images</a></h2>
+<p>Builder images are QCOW2 files with cloud-init support. To create your own:</p>
+<ol>
+<li>Build a base image with Forger (or any tool)</li>
+<li>Ensure <code>cloud-init</code> is installed and enabled</li>
+<li>Ensure SSH server is running</li>
+<li>Include all build dependencies (<code>pkg</code>, <code>qemu-img</code>, <code>zfs</code>, etc.)</li>
+<li>Push to an OCI registry or host as a downloadable file</li>
+</ol>
+<h3 id="minimum-requirements-for-a-builder-image"><a class="header" href="#minimum-requirements-for-a-builder-image">Minimum Requirements for a Builder Image</a></h3>
+<ul>
+<li>Cloud-init (for SSH key injection and user setup)</li>
+<li>SSH server</li>
+<li>The target distro's package manager</li>
+<li><code>qemu-img</code> (for QCOW2 conversion)</li>
+<li>Filesystem tools (<code>zfs</code>/<code>zpool</code> for ZFS, <code>parted</code>/<code>mkfs.ext4</code> for ext4)</li>
+<li>Bootloader tools (GRUB, UEFI support)</li>
+</ul>
+<h2 id="disk-overlay"><a class="header" href="#disk-overlay">Disk Overlay</a></h2>
+<p>The builder VM uses a disk overlay (copy-on-write layer) on top of the builder image. This means:</p>
+<ul>
+<li>The original builder image is never modified</li>
+<li>The overlay provides additional working space (20GB by default)</li>
+<li>Multiple builds can run concurrently from the same builder image</li>
+</ul>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="vm-fails-to-boot"><a class="header" href="#vm-fails-to-boot">VM Fails to Boot</a></h3>
+<ul>
+<li>Check that the builder image has cloud-init enabled</li>
+<li>Verify QEMU is installed and accessible</li>
+<li>Check system resources (enough RAM and disk for the VM)</li>
+</ul>
+<h3 id="ssh-connection-times-out"><a class="header" href="#ssh-connection-times-out">SSH Connection Times Out</a></h3>
+<ul>
+<li>The 120-second timeout may be insufficient for slow storage</li>
+<li>Check that the builder image's SSH server starts on boot</li>
+<li>Verify user-mode networking isn't blocked by firewall</li>
+</ul>
+<h3 id="build-fails-inside-vm"><a class="header" href="#build-fails-inside-vm">Build Fails Inside VM</a></h3>
+<ul>
+<li>The error output from the remote build is captured and displayed</li>
+<li>Check that the builder image has all required tools installed</li>
+<li>For disk space issues, increase the disk overlay size in the builder config</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="from-omnios-image-builder"><a class="header" href="#from-omnios-image-builder">From omnios-image-builder</a></h1>
+<p>This guide helps you migrate from the shell-based <code>omnios-image-builder</code> to Forger.</p>
+<h2 id="architecture-comparison"><a class="header" href="#architecture-comparison">Architecture Comparison</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>omnios-image-builder</th><th>Forger</th></tr></thead><tbody>
+<tr><td>Shell scripts (<code>strap.sh</code>, <code>aws.sh</code>, etc.)</td><td>Single <code>forger</code> binary</td></tr>
+<tr><td>JSON templates with step arrays</td><td>KDL specs with declarative blocks</td></tr>
+<tr><td>ZFS snapshots for caching</td><td><code>base</code> directive for caching</td></tr>
+<tr><td>Requires illumos host with ZFS + pfexec</td><td>Any host (remote builder VM)</td></tr>
+<tr><td>Manual pipeline (01-strap → 02-image → 03-archive → final)</td><td>Implicit pipeline via <code>base</code>/<code>include</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="mapping-concepts"><a class="header" href="#mapping-concepts">Mapping Concepts</a></h2>
+<h3 id="json-steps--kdl-blocks"><a class="header" href="#json-steps--kdl-blocks">JSON Steps → KDL Blocks</a></h3>
+<p>The old JSON templates used a <code>steps</code> array with typed objects:</p>
+<pre><code class="language-json">{
+  "steps": [
+    { "t": "pkg_image_create", "publisher": "omnios", "uri": "https://..." },
+    { "t": "pkg_install", "pkgs": ["entire"] },
+    { "t": "pkg_change_variant", "variant": "opensolaris.zone", "value": "global" }
+  ]
+}
+</code></pre>
+<p>In Forger, these become declarative blocks:</p>
+<pre><code class="language-kdl">repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+}
+
+incorporation "entire"
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+}
+</code></pre>
+<h3 id="step-type-mapping"><a class="header" href="#step-type-mapping">Step Type Mapping</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>JSON Step</th><th>KDL Equivalent</th></tr></thead><tbody>
+<tr><td><code>pkg_image_create</code></td><td><code>repositories { publisher ... }</code> (implicit)</td></tr>
+<tr><td><code>pkg_set_publisher</code></td><td><code>repositories { publisher ... }</code></td></tr>
+<tr><td><code>pkg_install</code></td><td><code>packages { package "..." }</code></td></tr>
+<tr><td><code>pkg_change_variant</code></td><td><code>variants { set ... }</code></td></tr>
+<tr><td><code>pkg_approve_ca_cert</code></td><td><code>certificates { ca ... }</code></td></tr>
+<tr><td><code>pkg_uninstall</code></td><td>Not needed (don't install unwanted packages)</td></tr>
+<tr><td><code>pkg_purge_history</code></td><td>Handled automatically</td></tr>
+<tr><td><code>pkg_set_property</code></td><td>Handled automatically</td></tr>
+<tr><td><code>ensure_file</code></td><td><code>overlays { file ... }</code></td></tr>
+<tr><td><code>ensure_dir</code></td><td><code>overlays { ensure-dir ... }</code></td></tr>
+<tr><td><code>ensure_symlink</code></td><td><code>overlays { ensure-symlink ... }</code></td></tr>
+<tr><td><code>remove_files</code></td><td><code>overlays { remove-files ... }</code></td></tr>
+<tr><td><code>shadow</code></td><td><code>overlays { shadow ... }</code></td></tr>
+<tr><td><code>devfsadm</code></td><td><code>overlays { devfsadm }</code></td></tr>
+<tr><td><code>seed_smf</code></td><td>Handled automatically</td></tr>
+<tr><td><code>include</code></td><td><code>include "file.kdl"</code></td></tr>
+<tr><td><code>create_be</code></td><td>Handled automatically (QCOW2 target)</td></tr>
+<tr><td><code>unpack_tar</code></td><td>Handled automatically (<code>base</code> directive)</td></tr>
+<tr><td><code>make_bootable</code></td><td><code>target ... { bootloader "uefi" }</code></td></tr>
+<tr><td><code>pack_tar</code></td><td><code>target "..." kind="artifact"</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="three-stage-pipeline--base--child"><a class="header" href="#three-stage-pipeline--base--child">Three-Stage Pipeline → Base + Child</a></h3>
+<p><strong>Old approach</strong> (three JSON files + shell orchestration):</p>
+<pre><code>01-strap.json  → pkg install entire → snapshot "strap"
+02-image.json  → pkg install extras → snapshot "image"
+03-archive.json → pack_tar → omnios-bloody.tar.gz
+aws.json       → unpack_tar + make_bootable → raw disk
+</code></pre>
+<p><strong>New approach</strong> (two KDL files):</p>
+<pre><code class="language-kdl">// omnios-base.kdl
+repositories { publisher name="omnios" ... }
+incorporation "entire"
+packages { package "/editor/vim" ... }
+</code></pre>
+<pre><code class="language-kdl">// omnios-disk.kdl
+base "omnios-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+packages { package "/system/cloud-init" }
+overlays { file destination="/boot/conf.d/console" ... }
+
+target "vm" kind="qcow2" { ... }
+</code></pre>
+<p>The <code>base</code> directive replaces the ZFS snapshot pipeline. The parent's output is cached, and the child builds on top.</p>
+<h3 id="pool-configuration"><a class="header" href="#pool-configuration">Pool Configuration</a></h3>
+<p><strong>Old</strong> (<code>pool</code> in JSON):</p>
+<pre><code class="language-json">{
+  "pool": { "name": "rpool", "ashift": 12, "uefi": true, "size": 2000 }
+}
+</code></pre>
+<p><strong>New</strong> (in target block):</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "2000M"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<h3 id="output-formats"><a class="header" href="#output-formats">Output Formats</a></h3>
+<p><strong>Old</strong>: Raw disk images only (convert to QCOW2/AMI externally)</p>
+<p><strong>New</strong>: QCOW2 natively, plus OCI container images and tar artifacts</p>
+<h3 id="cloud-provider-scripts"><a class="header" href="#cloud-provider-scripts">Cloud Provider Scripts</a></h3>
+<p>The old <code>aws.sh</code>, <code>digitalocean.sh</code>, and <code>smartosbhyve.sh</code> scripts are replaced by profiles or separate specs:</p>
+<pre><code class="language-kdl">// Cloud-provider-specific overlays via profiles
+overlays if="aws" {
+    file destination="/boot/conf.d/console" source="files/boot_console.aws"
+}
+
+overlays if="digitalocean" {
+    file destination="/boot/conf.d/console" source="files/boot_console.do"
+}
+</code></pre>
+<h2 id="migration-checklist"><a class="header" href="#migration-checklist">Migration Checklist</a></h2>
+<ol>
+<li>Identify your JSON templates and their step sequences</li>
+<li>Map each step to the equivalent KDL block (see table above)</li>
+<li>Split the three-stage pipeline into base + child specs</li>
+<li>Move overlay files to a <code>files/</code> directory relative to the specs</li>
+<li>Replace <code>setup.sh</code> dependency management with <code>forger</code> binary installation</li>
+<li>Test with <code>forger validate</code> and <code>forger inspect</code> before building</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="from-packer-oi-packer"><a class="header" href="#from-packer-oi-packer">From Packer (oi-packer)</a></h1>
+<p>This guide helps you migrate from HashiCorp Packer-based illumos image building to Forger.</p>
+<h2 id="why-migrate"><a class="header" href="#why-migrate">Why Migrate?</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Packer</th><th>Forger</th></tr></thead><tbody>
+<tr><td>Boots ISO, types keystrokes, waits</td><td>Direct package manager assembly</td></tr>
+<tr><td>20+ minute builds</td><td>Minutes</td></tr>
+<tr><td>No native caching</td><td>Multi-stage caching via <code>base</code></td></tr>
+<tr><td>Shell provisioners (order-sensitive)</td><td>Declarative KDL spec</td></tr>
+<tr><td>Vagrant boxes, raw disks</td><td>QCOW2, OCI, tar artifacts</td></tr>
+<tr><td>External upload scripts</td><td>Built-in OCI registry push</td></tr>
+</tbody></table>
+</div>
+<h2 id="mapping-concepts-1"><a class="header" href="#mapping-concepts-1">Mapping Concepts</a></h2>
+<h3 id="packer-source--not-needed"><a class="header" href="#packer-source--not-needed">Packer Source → Not Needed</a></h3>
+<p>Packer sources define the VM that runs the installer:</p>
+<pre><code class="language-hcl">source "qemu" "oi-hipster" {
+  iso_url          = "https://dlc.openindiana.org/isos/..."
+  iso_checksum     = "sha256:..."
+  disk_size        = "51200M"
+  memory           = 4096
+  accelerator      = "kvm"
+}
+</code></pre>
+<p>Forger doesn't boot an ISO. It calls the package manager directly, so there's no installer VM to configure.</p>
+<h3 id="boot-command--not-needed"><a class="header" href="#boot-command--not-needed">Boot Command → Not Needed</a></h3>
+<p>Packer's boot command types keystrokes into the installer:</p>
+<pre><code class="language-hcl">boot_command = [
+  "&lt;wait10&gt;&lt;wait10&gt;&lt;wait10&gt;",
+  "47&lt;enter&gt;&lt;wait&gt;",    // Select installation
+  "7&lt;enter&gt;&lt;wait&gt;",     // Select bootloader
+  // ... dozens more keystrokes
+]
+</code></pre>
+<p>Forger skips the installer entirely. Package installation happens through direct <code>pkg</code> or <code>apt</code> calls.</p>
+<h3 id="shell-provisioners--kdl-blocks"><a class="header" href="#shell-provisioners--kdl-blocks">Shell Provisioners → KDL Blocks</a></h3>
+<p><strong>Packer</strong> (shell scripts that SSH into the VM):</p>
+<pre><code class="language-hcl">provisioner "shell" {
+  scripts = [
+    "scripts/update.sh",      // pkg update
+    "scripts/vagrant.sh",     // Create vagrant user, install SSH keys
+    "scripts/cleanup.sh",     // Remove SSH host keys, clear logs
+  ]
+}
+</code></pre>
+<p><strong>Forger</strong> (declarative):</p>
+<pre><code class="language-kdl">packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+}
+
+customization {
+    user "deploy"
+}
+
+overlays {
+    file destination="/home/deploy/.ssh/authorized_keys" source="files/authorized_keys"
+    shadow username="deploy" password="$5$..."
+}
+</code></pre>
+<h3 id="post-processors--targets"><a class="header" href="#post-processors--targets">Post-Processors → Targets</a></h3>
+<p><strong>Packer</strong> (Vagrant box post-processor):</p>
+<pre><code class="language-hcl">post-processor "vagrant" {
+  compression_level = 9
+  output            = "OI-hipster-{{.Provider}}.box"
+}
+</code></pre>
+<p><strong>Forger</strong> (target block):</p>
+<pre><code class="language-kdl">target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    push-to "ghcr.io/myorg/my-image:latest"
+}
+</code></pre>
+<p>Forger doesn't produce Vagrant boxes directly. Instead, it produces QCOW2 images that work with QEMU/KVM, Proxmox, and other hypervisors. OCI container images are also available.</p>
+<h3 id="variables--profiles"><a class="header" href="#variables--profiles">Variables → Profiles</a></h3>
+<p><strong>Packer</strong> (HCL variables):</p>
+<pre><code class="language-hcl">variable "build_version" { default = "20240426" }
+</code></pre>
+<p><strong>Forger</strong> (profiles for variants):</p>
+<pre><code class="language-kdl">packages if="dev" {
+    package "/diagnostic/top"
+}
+</code></pre>
+<h2 id="full-migration-example"><a class="header" href="#full-migration-example">Full Migration Example</a></h2>
+<h3 id="packer-template-before"><a class="header" href="#packer-template-before">Packer Template (before)</a></h3>
+<pre><code class="language-hcl">source "qemu" "oi-hipster" {
+  iso_url     = "https://dlc.openindiana.org/isos/hipster/20240426/OI-hipster-text-20240426.iso"
+  disk_size   = "51200M"
+  memory      = 4096
+  format      = "qcow2"
+  boot_command = ["&lt;wait30&gt;", "47&lt;enter&gt;", /* ... 30 more lines ... */]
+}
+
+build {
+  sources = ["source.qemu.oi-hipster"]
+
+  provisioner "shell" { scripts = ["scripts/update.sh"] }
+  provisioner "shell" { scripts = ["scripts/vagrant.sh"] }
+  provisioner "shell" { scripts = ["scripts/cleanup.sh"] }
+
+  post-processor "vagrant" {
+    output = "OI-hipster-{{.Provider}}.box"
+  }
+}
+</code></pre>
+<h3 id="forger-spec-after"><a class="header" href="#forger-spec-after">Forger Spec (after)</a></h3>
+<pre><code class="language-kdl">metadata name="oi-hipster" version="1.0.0" description="OpenIndiana Hipster image"
+
+repositories {
+    publisher name="openindiana.org" origin="http://pkg.openindiana.org/hipster/"
+}
+
+incorporation "entire"
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+    package "/driver/network/vioif"
+    package "/driver/storage/vioblk"
+}
+
+customization {
+    user "deploy"
+}
+
+overlays {
+    file destination="/home/deploy/.ssh/authorized_keys" source="files/authorized_keys"
+}
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    filesystem "zfs"
+    push-to "ghcr.io/myorg/oi-hipster:latest"
+}
+</code></pre>
+<p>Build time drops from 20+ minutes (ISO boot + install + provisioning) to a few minutes (direct package installation).</p>
+<h2 id="migration-checklist-1"><a class="header" href="#migration-checklist-1">Migration Checklist</a></h2>
+<ol>
+<li>Identify packages installed by your shell provisioners</li>
+<li>List files copied or modified by provisioners</li>
+<li>Translate to KDL <code>packages</code>, <code>overlays</code>, and <code>customization</code> blocks</li>
+<li>Replace ISO-based installation with <code>repositories</code> + <code>incorporation</code></li>
+<li>Replace Vagrant post-processor with QCOW2 target + OCI push</li>
+<li>Test with <code>forger validate</code> and <code>forger inspect</code></li>
+<li>Build and verify the image boots correctly</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h1>
+<h2 id="forger-build"><a class="header" href="#forger-build">forger build</a></h2>
+<p>Build an image from a spec file.</p>
+<pre><code>forger build [OPTIONS] --spec &lt;PATH&gt;
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--spec &lt;PATH&gt;</code></td><td>Path to the KDL spec file (required)</td></tr>
+<tr><td><code>--target &lt;NAME&gt;</code></td><td>Build only this target (default: all)</td></tr>
+<tr><td><code>--profile &lt;PROFILE&gt;</code></td><td>Activate a profile (repeatable)</td></tr>
+<tr><td><code>--output-dir &lt;PATH&gt;</code></td><td>Output directory (default: <code>./output</code>)</td></tr>
+<tr><td><code>--local</code></td><td>Force local build (skip builder VM)</td></tr>
+<tr><td><code>--use-builder</code></td><td>Force build inside a builder VM</td></tr>
+<tr><td><code>--skip-push</code></td><td>Don't push to registry after build</td></tr>
+<tr><td><code>--builder-image &lt;SPEC&gt;</code></td><td>Override builder VM image</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code class="language-bash"># Build all targets
+forger build --spec images/omnios-bloody-disk.kdl
+
+# Build specific target with profile
+forger build --spec images/omnios-bloody-disk.kdl --target vm --profile build
+
+# Force local build, custom output directory
+forger build --spec images/omnios-bloody-disk.kdl --local --output-dir /tmp/images
+
+# Build with custom builder image
+forger build --spec images/ubuntu-rust-ci.kdl --builder-image /path/to/builder.qcow2
+</code></pre>
+<h2 id="forger-validate"><a class="header" href="#forger-validate">forger validate</a></h2>
+<p>Parse and check a spec file for errors.</p>
+<pre><code>forger validate --spec &lt;PATH&gt;
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--spec &lt;PATH&gt;</code></td><td>Path to the KDL spec file (required)</td></tr>
+</tbody></table>
+</div>
+<p>Checks:</p>
+<ul>
+<li>KDL syntax</li>
+<li>Schema conformance</li>
+<li>Include/base resolution</li>
+<li>Circular dependency detection</li>
+</ul>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code class="language-bash">forger validate --spec images/omnios-bloody-disk.kdl
+</code></pre>
+<h2 id="forger-inspect"><a class="header" href="#forger-inspect">forger inspect</a></h2>
+<p>Parse, resolve, and apply profiles, then display the resolved spec.</p>
+<pre><code>forger inspect [OPTIONS] --spec &lt;PATH&gt;
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--spec &lt;PATH&gt;</code></td><td>Path to the KDL spec file (required)</td></tr>
+<tr><td><code>--profile &lt;PROFILE&gt;</code></td><td>Activate a profile (repeatable)</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<pre><code class="language-bash"># Inspect without profiles
+forger inspect --spec images/omnios-bloody-disk.kdl
+
+# Inspect with build profile to see what's included
+forger inspect --spec images/omnios-bloody-disk.kdl --profile build
+</code></pre>
+<h2 id="forger-push"><a class="header" href="#forger-push">forger push</a></h2>
+<p>Push a built artifact to an OCI registry.</p>
+<pre><code>forger push [OPTIONS] --image &lt;PATH&gt; --reference &lt;REF&gt;
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--image &lt;PATH&gt;</code></td><td>Path to OCI Image Layout directory or QCOW2 file</td></tr>
+<tr><td><code>--reference &lt;REF&gt;</code></td><td>Registry reference (e.g., <code>ghcr.io/org/image:tag</code>)</td></tr>
+<tr><td><code>--auth-file &lt;PATH&gt;</code></td><td>JSON auth file (optional)</td></tr>
+<tr><td><code>--artifact</code></td><td>Push QCOW2 as OCI artifact</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-2"><a class="header" href="#examples-2">Examples</a></h3>
+<pre><code class="language-bash"># Push OCI image
+forger push --image output/container/ --reference ghcr.io/myorg/myimage:latest
+
+# Push QCOW2 as artifact
+forger push --image output/vm.qcow2 --reference ghcr.io/myorg/myvm:latest --artifact
+
+# Push with auth file
+forger push --image output/container/ \
+  --reference registry.example.com/myimage:latest \
+  --auth-file auth.json
+</code></pre>
+<h2 id="forger-targets"><a class="header" href="#forger-targets">forger targets</a></h2>
+<p>List targets defined in a spec file.</p>
+<pre><code>forger targets --spec &lt;PATH&gt;
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--spec &lt;PATH&gt;</code></td><td>Path to the KDL spec file (required)</td></tr>
+</tbody></table>
+</div>
+<h3 id="example-1"><a class="header" href="#example-1">Example</a></h3>
+<pre><code class="language-bash">forger targets --spec images/omnios-bloody-disk.kdl
+</code></pre>
+<p>Output:</p>
+<pre><code>vm (qcow2)
+</code></pre>
+<h2 id="environment-variables-1"><a class="header" href="#environment-variables-1">Environment Variables</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Variable</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>GITHUB_TOKEN</code></td><td>Used for GHCR authentication when pushing</td></tr>
+<tr><td><code>RUST_LOG</code></td><td>Logging level (e.g., <code>info</code>, <code>debug</code>, <code>trace</code>)</td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="kdl-spec-reference"><a class="header" href="#kdl-spec-reference">KDL Spec Reference</a></h1>
+<p>Complete reference for all KDL spec nodes and properties.</p>
+<h2 id="top-level-nodes"><a class="header" href="#top-level-nodes">Top-Level Nodes</a></h2>
+<h3 id="metadata-1"><a class="header" href="#metadata-1">metadata</a></h3>
+<pre><code class="language-kdl">metadata name="&lt;string&gt;" version="&lt;string&gt;" description="&lt;string&gt;"
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>string</td><td>Yes</td><td>Image name</td></tr>
+<tr><td><code>version</code></td><td>string</td><td>Yes</td><td>Semantic version</td></tr>
+<tr><td><code>description</code></td><td>string</td><td>No</td><td>Human-readable description</td></tr>
+</tbody></table>
+</div>
+<h3 id="distro"><a class="header" href="#distro">distro</a></h3>
+<pre><code class="language-kdl">distro "&lt;string&gt;"
+</code></pre>
+<p>Distro identifier. Determines the build path (IPS vs APT). Omit for OmniOS (default).</p>
+<div class="table-wrapper"><table><thead><tr><th>Value</th><th>Family</th></tr></thead><tbody>
+<tr><td><em>(omitted)</em></td><td>OmniOS</td></tr>
+<tr><td><code>"ubuntu-22.04"</code></td><td>Ubuntu</td></tr>
+</tbody></table>
+</div>
+<h3 id="base"><a class="header" href="#base">base</a></h3>
+<pre><code class="language-kdl">base "&lt;path&gt;"
+</code></pre>
+<p>Parent spec file. Creates a build-stage boundary for caching. Path is relative to the current spec file.</p>
+<h3 id="include"><a class="header" href="#include">include</a></h3>
+<pre><code class="language-kdl">include "&lt;path&gt;"
+</code></pre>
+<p>Sibling spec file to merge. Imports shared steps. Path is relative to the current spec file.</p>
+<h3 id="incorporation"><a class="header" href="#incorporation">incorporation</a></h3>
+<pre><code class="language-kdl">incorporation "&lt;string&gt;"
+</code></pre>
+<p>IPS incorporation constraint (OmniOS only). Typically <code>"entire"</code>.</p>
+<h2 id="block-nodes"><a class="header" href="#block-nodes">Block Nodes</a></h2>
+<h3 id="repositories-1"><a class="header" href="#repositories-1">repositories</a></h3>
+<pre><code class="language-kdl">repositories {
+    publisher name="&lt;string&gt;" origin="&lt;url&gt;"
+    apt-mirror "&lt;url&gt;" suite="&lt;string&gt;" components="&lt;string&gt;"
+}
+</code></pre>
+<p><strong>publisher</strong> (IPS):</p>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>string</td><td>Yes</td></tr>
+<tr><td><code>origin</code></td><td>string (URL)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<p><strong>apt-mirror</strong> (APT):</p>
+<div class="table-wrapper"><table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><em>(positional)</em></td><td>string (URL)</td><td>Yes</td></tr>
+<tr><td><code>suite</code></td><td>string</td><td>Yes</td></tr>
+<tr><td><code>components</code></td><td>string (space-separated)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<h3 id="certificates"><a class="header" href="#certificates">certificates</a></h3>
+<pre><code class="language-kdl">certificates {
+    ca publisher="&lt;string&gt;" certfile="&lt;path&gt;"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>publisher</code></td><td>string</td><td>Yes</td></tr>
+<tr><td><code>certfile</code></td><td>string (path)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<h3 id="variants"><a class="header" href="#variants">variants</a></h3>
+<pre><code class="language-kdl">variants {
+    set name="&lt;string&gt;" value="&lt;string&gt;"
+}
+</code></pre>
+<p>IPS variant settings. Common: <code>name="opensolaris.zone" value="global"</code>.</p>
+<h3 id="packages-1"><a class="header" href="#packages-1">packages</a></h3>
+<pre><code class="language-kdl">packages if="&lt;profile&gt;" {
+    package "&lt;name&gt;"
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>if</code></td><td>string</td><td>No</td></tr>
+</tbody></table>
+</div>
+<p>The <code>if</code> property enables profile filtering. Omit for unconditional packages.</p>
+<h3 id="overlays-1"><a class="header" href="#overlays-1">overlays</a></h3>
+<pre><code class="language-kdl">overlays if="&lt;profile&gt;" {
+    file destination="&lt;path&gt;" source="&lt;path&gt;"
+    ensure-dir "&lt;path&gt;" owner="&lt;string&gt;" group="&lt;string&gt;" mode="&lt;string&gt;"
+    ensure-symlink "&lt;path&gt;" target="&lt;path&gt;"
+    remove-files "&lt;path&gt;" "&lt;path&gt;" ...
+    shadow username="&lt;string&gt;" password="&lt;string&gt;"
+    devfsadm
+}
+</code></pre>
+<p><strong>file</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>destination</code></td><td>string (absolute path)</td><td>Yes</td></tr>
+<tr><td><code>source</code></td><td>string (relative path)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<p><strong>ensure-dir</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Argument/Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><em>(positional)</em></td><td>string (path)</td><td>Yes</td></tr>
+<tr><td><code>owner</code></td><td>string</td><td>No</td></tr>
+<tr><td><code>group</code></td><td>string</td><td>No</td></tr>
+<tr><td><code>mode</code></td><td>string (octal)</td><td>No</td></tr>
+</tbody></table>
+</div>
+<p><strong>ensure-symlink</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Argument/Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><em>(positional)</em></td><td>string (link path)</td><td>Yes</td></tr>
+<tr><td><code>target</code></td><td>string (target path)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<p><strong>remove-files</strong>: One or more path arguments.</p>
+<p><strong>shadow</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>username</code></td><td>string</td><td>Yes</td></tr>
+<tr><td><code>password</code></td><td>string (crypt hash)</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<p><strong>devfsadm</strong>: No arguments.</p>
+<h3 id="customization"><a class="header" href="#customization">customization</a></h3>
+<pre><code class="language-kdl">customization if="&lt;profile&gt;" {
+    user "&lt;username&gt;"
+}
+</code></pre>
+<h3 id="builder"><a class="header" href="#builder">builder</a></h3>
+<pre><code class="language-kdl">builder {
+    image "&lt;string&gt;"
+    vcpus &lt;integer&gt;
+    memory &lt;integer&gt;
+    disk &lt;integer&gt;
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>image</code></td><td>string</td><td>No</td><td>Distro default</td></tr>
+<tr><td><code>vcpus</code></td><td>integer</td><td>No</td><td>Host-dependent</td></tr>
+<tr><td><code>memory</code></td><td>integer (MB)</td><td>No</td><td>Host-dependent</td></tr>
+<tr><td><code>disk</code></td><td>integer (GB)</td><td>No</td><td>20</td></tr>
+</tbody></table>
+</div>
+<h3 id="target"><a class="header" href="#target">target</a></h3>
+<pre><code class="language-kdl">target "&lt;name&gt;" kind="&lt;kind&gt;" {
+    // kind-specific properties
+}
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><em>(positional)</em></td><td>string (name)</td><td>Yes</td></tr>
+<tr><td><code>kind</code></td><td>string</td><td>Yes</td></tr>
+</tbody></table>
+</div>
+<p><strong>kind="qcow2"</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>disk-size</code></td><td>string (e.g., "8G")</td><td>Yes</td></tr>
+<tr><td><code>bootloader</code></td><td>string</td><td>Yes</td></tr>
+<tr><td><code>filesystem</code></td><td>string</td><td>No</td></tr>
+<tr><td><code>push-to</code></td><td>string (registry ref)</td><td>No</td></tr>
+<tr><td><code>pool</code> children</td><td>property nodes</td><td>No</td></tr>
+</tbody></table>
+</div>
+<p><strong>kind="oci"</strong>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Property</th><th>Type</th><th>Required</th></tr></thead><tbody>
+<tr><td><code>entrypoint</code></td><td>node with <code>command</code></td><td>No</td></tr>
+<tr><td><code>environment</code> children</td><td><code>set</code> nodes</td><td>No</td></tr>
+<tr><td><code>push-to</code></td><td>string</td><td>No</td></tr>
+</tbody></table>
+</div>
+<p><strong>kind="artifact"</strong>: No additional properties.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="example-specs"><a class="header" href="#example-specs">Example Specs</a></h1>
+<p>Complete, production-ready examples from the <code>images/</code> directory.</p>
+<h2 id="omnios-bloody-base"><a class="header" href="#omnios-bloody-base">OmniOS Bloody Base</a></h2>
+<p>A reusable base spec for OmniOS bloody images. This is typically used as a <code>base</code> for other specs.</p>
+<pre><code class="language-kdl">metadata name="omnios-bloody-base" version="1.0.0" description="Base OmniOS bloody image"
+
+repositories {
+    publisher name="omnios" origin="https://pkg.omnios.org/bloody/core/"
+    publisher name="extra.omnios" origin="https://pkg.omnios.org/bloody/extra/"
+}
+
+incorporation "entire"
+
+certificates {
+    ca publisher="omnios" certfile="omniosce-ca.cert.pem"
+}
+
+variants {
+    set name="opensolaris.zone" value="global"
+}
+
+packages {
+    package "/editor/vim"
+    package "/network/openssh-server"
+    package "/network/rsync"
+    package "/service/network/ntpsec"
+    package "/web/curl"
+    package "/web/wget"
+    package "/system/cloud-init"
+}
+
+packages if="build" {
+    package "/developer/build-essential"
+    package "/ooce/developer/omnios-build-tools"
+    package "/developer/build/gnu-make"
+}
+</code></pre>
+<h2 id="omnios-bloody-bootable-disk"><a class="header" href="#omnios-bloody-bootable-disk">OmniOS Bloody Bootable Disk</a></h2>
+<p>A bootable QCOW2 VM image built on top of the base. Includes device filesystem setup, network configuration, and boot console settings.</p>
+<pre><code class="language-kdl">metadata name="omnios-bloody-disk" version="1.0.0" description="OmniOS bloody bootable disk"
+
+base "omnios-bloody-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+packages {
+    package "/system/cloud-init"
+    package "/driver/virtio/viorand"
+    package "/driver/virtio/vioif"
+    package "/driver/virtio/vioblk"
+    package "/driver/virtio/vio9p"
+    package "/driver/virtio/vioscsi"
+}
+
+overlays {
+    file destination="/boot/conf.d/console" source="files/boot_console.115200"
+    file destination="/etc/ttydefs" source="files/ttydefs.115200"
+    file destination="/etc/default/init" source="files/default_init.utc"
+    shadow username="root" password="$5$rounds=10000$..."
+}
+
+target "vm" kind="qcow2" {
+    disk-size "2000M"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+}
+</code></pre>
+<h2 id="omnios-rust-ci-image"><a class="header" href="#omnios-rust-ci-image">OmniOS Rust CI Image</a></h2>
+<p>An OmniOS image with the Rust toolchain for continuous integration.</p>
+<pre><code class="language-kdl">metadata name="omnios-rust-ci" version="1.0.0" description="OmniOS Rust CI image"
+
+base "omnios-bloody-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
+
+packages {
+    package "/ooce/developer/rust"
+    package "/developer/versioning/git"
+    package "/system/cloud-init"
+    package "/driver/virtio/viorand"
+    package "/driver/virtio/vioif"
+    package "/driver/virtio/vioblk"
+    package "/driver/virtio/vio9p"
+    package "/driver/virtio/vioscsi"
+}
+
+builder {
+    image "oci://ghcr.io/cloudnebulaproject/omnios-builder:latest"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "uefi"
+    filesystem "zfs"
+    pool {
+        property name="ashift" value="12"
+    }
+    push-to "ghcr.io/cloudnebulaproject/omnios-rust:latest"
+}
+</code></pre>
+<h2 id="ubuntu-rust-ci-image"><a class="header" href="#ubuntu-rust-ci-image">Ubuntu Rust CI Image</a></h2>
+<p>An Ubuntu 22.04 image with the Rust toolchain.</p>
+<pre><code class="language-kdl">metadata name="ubuntu-rust-ci" version="1.0.0" description="Ubuntu 22.04 Rust CI image"
+
+distro "ubuntu-22.04"
+
+repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+}
+
+packages {
+    package "build-essential"
+    package "rustc"
+    package "cargo"
+    package "git"
+    package "curl"
+    package "openssh-server"
+    package "cloud-init"
+    package "linux-image-generic"
+    package "grub-efi-amd64-bin"
+    package "libssl-dev"
+    package "pkg-config"
+}
+
+customization {
+    user "ci"
+}
+
+builder {
+    image "oci://ghcr.io/cloudnebulaproject/ubuntu-builder:latest"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+
+target "vm" kind="qcow2" {
+    disk-size "8G"
+    bootloader "grub-efi-amd64-bin"
+    filesystem "ext4"
+    push-to "ghcr.io/cloudnebulaproject/ubuntu-rust:latest"
+}
+</code></pre>
+<h2 id="device-filesystem-include"><a class="header" href="#device-filesystem-include">Device Filesystem Include</a></h2>
+<p>Standard device node setup for bootable illumos images.</p>
+<pre><code class="language-kdl">overlays {
+    devfsadm
+
+    remove-files "/dev/dsk" "/dev/rdsk" "/dev/cfg" "/dev/usb"
+
+    ensure-dir "/dev/cfg" owner="root" group="root" mode="755"
+    ensure-dir "/dev/dsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/rdsk" owner="root" group="root" mode="755"
+    ensure-dir "/dev/usb" owner="root" group="root" mode="755"
+
+    ensure-symlink "/dev/msglog" target="../devices/pseudo/log@0:msglog"
+}
+</code></pre>
+<h2 id="common-system-configuration-include"><a class="header" href="#common-system-configuration-include">Common System Configuration Include</a></h2>
+<p>Standard network and SMF profile setup for illumos images.</p>
+<pre><code class="language-kdl">overlays {
+    ensure-symlink "/etc/svc/profile/generic.xml" target="generic_limited_net.xml"
+    ensure-symlink "/etc/svc/profile/inetd_services.xml" target="inetd_generic.xml"
+    ensure-symlink "/etc/svc/profile/platform.xml" target="platform_none.xml"
+    ensure-symlink "/etc/svc/profile/name_service.xml" target="ns_dns.xml"
+
+    file destination="/etc/inet/hosts" source="files/etc/hosts"
+    file destination="/etc/nodename" source="files/etc/nodename"
+    file destination="/etc/resolv.conf" source="files/etc/resolv.conf"
+    ensure-symlink "/etc/nsswitch.conf" target="/etc/nsswitch.dns"
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
