@@ -25,9 +25,15 @@ fn create_user(username: &str, staging_root: &Path) -> Result<(), ForgeError> {
         detail: e.to_string(),
     })?;
 
-    // Append to /etc/passwd
     let passwd_path = etc_dir.join("passwd");
-    let passwd_entry = format!("{username}:x:1000:1000::/home/{username}:/bin/sh\n");
+    let group_path = etc_dir.join("group");
+
+    // Find the next available UID/GID (start at 1000, scan existing files)
+    let next_uid = next_id_from_file(&passwd_path, 2);
+    let next_gid = next_id_from_file(&group_path, 2);
+
+    // Append to /etc/passwd
+    let passwd_entry = format!("{username}:x:{next_uid}:{next_gid}::/home/{username}:/bin/sh\n");
     append_or_create(&passwd_path, &passwd_entry).map_err(|e| ForgeError::Customization {
         operation: format!("add user {username} to /etc/passwd"),
         detail: e.to_string(),
@@ -42,14 +48,39 @@ fn create_user(username: &str, staging_root: &Path) -> Result<(), ForgeError> {
     })?;
 
     // Append to /etc/group
-    let group_path = etc_dir.join("group");
-    let group_entry = format!("{username}::1000:\n");
+    let group_entry = format!("{username}::{next_gid}:\n");
     append_or_create(&group_path, &group_entry).map_err(|e| ForgeError::Customization {
         operation: format!("add group {username} to /etc/group"),
         detail: e.to_string(),
     })?;
 
     Ok(())
+}
+
+/// Scan a colon-delimited file (passwd or group) and return the next available
+/// ID. The `id_field` parameter is the 0-based column index containing the
+/// numeric ID (2 for passwd UID, 2 for group GID). Returns at least 1000.
+fn next_id_from_file(path: &Path, id_field: usize) -> u32 {
+    const MIN_ID: u32 = 1000;
+
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return MIN_ID,
+    };
+
+    let max_id = content
+        .lines()
+        .filter_map(|line| {
+            let fields: Vec<&str> = line.split(':').collect();
+            fields.get(id_field)?.parse::<u32>().ok()
+        })
+        .filter(|&id| id >= MIN_ID)
+        .max();
+
+    match max_id {
+        Some(id) => id + 1,
+        None => MIN_ID,
+    }
 }
 
 fn append_or_create(path: &Path, content: &str) -> Result<(), std::io::Error> {
@@ -98,16 +129,25 @@ mod tests {
         let customization = Customization {
             r#if: None,
             users: vec![
-                User { name: "alice".to_string() },
-                User { name: "bob".to_string() },
+                User {
+                    name: "alice".to_string(),
+                },
+                User {
+                    name: "bob".to_string(),
+                },
             ],
         };
 
         apply(&customization, staging.path()).unwrap();
 
         let passwd = std::fs::read_to_string(staging.path().join("etc/passwd")).unwrap();
+        assert!(passwd.contains("alice:x:1000:1000::/home/alice:/bin/sh"));
+        assert!(passwd.contains("bob:x:1001:1001::/home/bob:/bin/sh"));
+
+        let group = std::fs::read_to_string(staging.path().join("etc/group")).unwrap();
         assert!(passwd.contains("alice"));
-        assert!(passwd.contains("bob"));
+        assert!(group.contains("alice::1000:"));
+        assert!(group.contains("bob::1001:"));
     }
 
     #[test]

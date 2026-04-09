@@ -6,7 +6,7 @@ pub mod qcow2_zfs;
 
 use std::path::Path;
 
-use spec_parser::schema::{Target, TargetKind};
+use spec_parser::schema::{DistroFamily, Target, TargetKind};
 use tracing::info;
 
 use crate::error::ForgeError;
@@ -20,6 +20,7 @@ pub async fn execute(
     staging_root: &Path,
     files_dir: &Path,
     output_dir: &Path,
+    distro: &DistroFamily,
 ) -> Result<(), ForgeError> {
     info!(
         target = %target.name,
@@ -29,7 +30,7 @@ pub async fn execute(
 
     match target.kind {
         TargetKind::Oci => {
-            oci::build_oci(target, staging_root, output_dir)?;
+            oci::build_oci(target, staging_root, output_dir, distro)?;
         }
         TargetKind::Artifact => {
             artifact::build_artifact(target, staging_root, output_dir, files_dir)?;
@@ -47,6 +48,8 @@ pub async fn execute(
 pub async fn push_qcow2_if_configured(
     target: &Target,
     output_dir: &Path,
+    distro: &DistroFamily,
+    version: &str,
 ) -> Result<(), ForgeError> {
     if let Some(ref push_ref) = target.push_to {
         let qcow2_path = output_dir.join(format!("{}.qcow2", target.name));
@@ -65,9 +68,9 @@ pub async fn push_qcow2_if_configured(
 
         let metadata = forge_oci::artifact::Qcow2Metadata {
             name: target.name.clone(),
-            version: "latest".to_string(),
+            version: version.to_string(),
             architecture: "amd64".to_string(),
-            os: "linux".to_string(),
+            os: distro.oci_os().to_string(),
             description: None,
         };
 

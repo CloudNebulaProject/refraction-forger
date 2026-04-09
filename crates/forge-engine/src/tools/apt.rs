@@ -69,19 +69,29 @@ pub async fn write_sources_list(
 
 /// Add an APT source entry to the chroot's sources.list.d/.
 pub async fn add_source(
-    runner: &dyn ToolRunner,
+    _runner: &dyn ToolRunner,
     root: &str,
     entry: &str,
 ) -> Result<(), ForgeError> {
+    use std::io::Write;
     info!(root, entry, "Adding APT source");
-    let list_path = Path::new(root)
-        .join("etc/apt/sources.list.d/extra.list");
-    let list_str = list_path.to_str().unwrap_or("extra.list");
+    let list_path = Path::new(root).join("etc/apt/sources.list.d/extra.list");
 
-    // Append entry to the sources list file
-    runner
-        .run("sh", &["-c", &format!("echo '{entry}' >> {list_str}")])
-        .await?;
+    // Append entry directly to the file, avoiding shell interpolation
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&list_path)
+        .map_err(|e| ForgeError::Overlay {
+            action: "add APT source".to_string(),
+            detail: list_path.display().to_string(),
+            source: e,
+        })?;
+    writeln!(file, "{entry}").map_err(|e| ForgeError::Overlay {
+        action: "write APT source entry".to_string(),
+        detail: list_path.display().to_string(),
+        source: e,
+    })?;
     Ok(())
 }
 

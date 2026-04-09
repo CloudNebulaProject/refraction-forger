@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use spec_parser::schema::Target;
+use spec_parser::schema::{DistroFamily, Target};
 use tracing::info;
 
 use crate::error::ForgeError;
@@ -10,6 +10,7 @@ pub fn build_oci(
     target: &Target,
     staging_root: &Path,
     output_dir: &Path,
+    distro: &DistroFamily,
 ) -> Result<(), ForgeError> {
     info!("Building OCI container image");
 
@@ -24,7 +25,10 @@ pub fn build_oci(
     );
 
     // Build image options from target spec
-    let mut options = forge_oci::manifest::ImageOptions::default();
+    let mut options = forge_oci::manifest::ImageOptions {
+        os: distro.oci_os().to_string(),
+        ..Default::default()
+    };
 
     if let Some(ref ep) = target.entrypoint {
         options.entrypoint = Some(vec![ep.command.clone()]);
@@ -54,7 +58,7 @@ pub fn build_oci(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spec_parser::schema::{Entrypoint, Environment, EnvVar, TargetKind};
+    use spec_parser::schema::{DistroFamily, Entrypoint, Environment, EnvVar, TargetKind};
     use tempfile::TempDir;
 
     fn make_target(name: &str, entrypoint: Option<Entrypoint>, env: Option<Environment>) -> Target {
@@ -82,7 +86,7 @@ mod tests {
         std::fs::write(staging.path().join("etc/motd"), "Welcome\n").unwrap();
 
         let target = make_target("container", None, None);
-        build_oci(&target, staging.path(), output.path()).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
 
         let oci_dir = output.path().join("container-oci");
         assert!(oci_dir.exists());
@@ -111,7 +115,7 @@ mod tests {
             }),
         );
 
-        build_oci(&target, staging.path(), output.path()).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
 
         let oci_dir = output.path().join("app-oci");
         assert!(oci_dir.join("oci-layout").exists());
@@ -130,7 +134,7 @@ mod tests {
         let output = TempDir::new().unwrap();
 
         let target = make_target("minimal", None, None);
-        build_oci(&target, staging.path(), output.path()).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
 
         assert!(output.path().join("minimal-oci/oci-layout").exists());
     }

@@ -9,7 +9,7 @@ pub mod tools;
 use std::path::Path;
 
 use error::ForgeError;
-use spec_parser::schema::{ImageSpec, Target, TargetKind};
+use spec_parser::schema::{DistroFamily, ImageSpec, Target, TargetKind};
 use tools::ToolRunner;
 use tracing::info;
 
@@ -46,11 +46,13 @@ impl<'a> BuildContext<'a> {
                     let phase1_result =
                         phase1::execute(self.spec, self.files_dir, self.runner).await?;
 
+                    let distro = DistroFamily::from_distro_str(self.spec.distro.as_deref());
                     phase2::execute(
                         target,
                         &phase1_result.staging_root,
                         self.files_dir,
                         self.output_dir,
+                        &distro,
                     )
                     .await?;
                 }
@@ -92,7 +94,14 @@ impl<'a> BuildContext<'a> {
 
         // Auto-push to OCI registry if configured (skipped when host-side push handles it)
         if !self.skip_push {
-            phase2::push_qcow2_if_configured(target, self.output_dir).await?;
+            let distro = DistroFamily::from_distro_str(self.spec.distro.as_deref());
+            phase2::push_qcow2_if_configured(
+                target,
+                self.output_dir,
+                &distro,
+                &self.spec.metadata.version,
+            )
+            .await?;
         }
 
         Ok(())

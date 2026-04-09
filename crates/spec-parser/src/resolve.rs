@@ -219,8 +219,62 @@ fn merge_base(mut base: ImageSpec, child: ImageSpec) -> ImageSpec {
 }
 
 /// Merge an included spec into the current spec. Includes contribute
-/// packages, customizations, and overlays but not metadata/targets.
+/// repositories, variants, certificates, packages, customizations, and
+/// overlays — but not metadata, distro, targets, or builder.
 fn merge_include(spec: &mut ImageSpec, included: ImageSpec) {
+    // Merge publishers (dedup by name)
+    for pub_entry in included.repositories.publishers {
+        if !spec
+            .repositories
+            .publishers
+            .iter()
+            .any(|p| p.name == pub_entry.name)
+        {
+            spec.repositories.publishers.push(pub_entry);
+        }
+    }
+
+    // Merge apt_mirrors (dedup by URL)
+    for mirror in included.repositories.apt_mirrors {
+        if !spec
+            .repositories
+            .apt_mirrors
+            .iter()
+            .any(|m| m.url == mirror.url)
+        {
+            spec.repositories.apt_mirrors.push(mirror);
+        }
+    }
+
+    // Merge variants
+    if let Some(inc_variants) = included.variants {
+        if let Some(ref mut spec_variants) = spec.variants {
+            for var in inc_variants.vars {
+                if let Some(existing) = spec_variants.vars.iter_mut().find(|v| v.name == var.name) {
+                    existing.value = var.value;
+                } else {
+                    spec_variants.vars.push(var);
+                }
+            }
+        } else {
+            spec.variants = Some(inc_variants);
+        }
+    }
+
+    // Merge certificates
+    if let Some(inc_certs) = included.certificates {
+        if let Some(ref mut spec_certs) = spec.certificates {
+            spec_certs.ca.extend(inc_certs.ca);
+        } else {
+            spec.certificates = Some(inc_certs);
+        }
+    }
+
+    // Merge incorporation (included overrides only if spec doesn't have one)
+    if spec.incorporation.is_none() && included.incorporation.is_some() {
+        spec.incorporation = included.incorporation;
+    }
+
     spec.packages.extend(included.packages);
     spec.customizations.extend(included.customizations);
     spec.overlays.extend(included.overlays);
@@ -274,6 +328,17 @@ mod tests {
         let resolved = resolve(spec, tmp.path()).unwrap();
 
         assert_eq!(resolved.metadata.name, "root");
+        assert_eq!(resolved.repositories.publishers.len(), 2);
+        assert!(resolved
+            .repositories
+            .publishers
+            .iter()
+            .any(|p| p.name == "main"));
+        assert!(resolved
+            .repositories
+            .publishers
+            .iter()
+            .any(|p| p.name == "extra"));
         assert_eq!(resolved.packages.len(), 2);
         assert_eq!(resolved.overlays.len(), 1);
     }

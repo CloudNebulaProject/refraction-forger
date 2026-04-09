@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use spec_parser::schema::ImageSpec;
+use spec_parser::schema::{DistroFamily, ImageSpec};
 use tracing::info;
 
 use crate::error::BuilderError;
@@ -39,11 +39,12 @@ pub async fn push_qcow2_outputs(spec: &ImageSpec, output_dir: &Path) -> Result<(
                 detail: format!("failed to read QCOW2 file {}: {e}", qcow2_path.display()),
             })?;
 
+        let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
         let metadata = forge_oci::artifact::Qcow2Metadata {
             name: target.name.clone(),
-            version: "latest".to_string(),
+            version: spec.metadata.version.clone(),
             architecture: "amd64".to_string(),
-            os: "linux".to_string(),
+            os: distro.oci_os().to_string(),
             description: None,
         };
 

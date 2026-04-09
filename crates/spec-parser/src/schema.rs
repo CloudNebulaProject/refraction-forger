@@ -16,6 +16,14 @@ impl DistroFamily {
             _ => DistroFamily::OmniOS,
         }
     }
+
+    /// Return the OCI OS value for this distro family.
+    pub fn oci_os(&self) -> &'static str {
+        match self {
+            DistroFamily::OmniOS => "solaris",
+            DistroFamily::Ubuntu => "linux",
+        }
+    }
 }
 
 #[derive(Debug, Decode)]

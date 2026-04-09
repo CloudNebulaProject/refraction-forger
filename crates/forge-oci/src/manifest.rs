@@ -48,9 +48,8 @@ pub fn build_manifest(
     layers: &[LayerBlob],
     options: &ImageOptions,
 ) -> Result<(Vec<u8>, Vec<u8>), ManifestError> {
-    // Build the diff_ids for the rootfs (uncompressed layer digests aren't tracked here,
-    // so we use the compressed digest -- in a full implementation you'd track both)
-    let diff_ids: Vec<String> = layers.iter().map(|l| l.digest.clone()).collect();
+    // diff_ids must be uncompressed layer digests per OCI image spec
+    let diff_ids: Vec<String> = layers.iter().map(|l| l.uncompressed_digest.clone()).collect();
 
     let rootfs = RootFsBuilder::default()
         .typ("layers")
@@ -154,6 +153,7 @@ mod tests {
             build_manifest(&[layer], &ImageOptions::default()).unwrap();
 
         let config: serde_json::Value = serde_json::from_slice(&config_json).unwrap();
+        // Default is OmniOS → "solaris" in OCI terms
         assert_eq!(config["os"], "solaris");
         assert_eq!(config["architecture"], "amd64");
 

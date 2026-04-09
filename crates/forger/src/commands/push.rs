@@ -132,10 +132,23 @@ async fn push_oci_layout(
             .into_diagnostic()
             .wrap_err_with(|| format!("Failed to read layer blob: {layer_digest}"))?;
 
+        // Decompress to get uncompressed size and digest for diff_id
+        let mut decoder = flate2::read::GzDecoder::new(layer_data.as_slice());
+        let mut uncompressed = Vec::new();
+        std::io::Read::read_to_end(&mut decoder, &mut uncompressed)
+            .into_diagnostic()
+            .wrap_err_with(|| format!("Failed to decompress layer: {layer_digest}"))?;
+
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&uncompressed);
+        let uncompressed_digest = format!("sha256:{}", hex::encode(hasher.finalize()));
+
         layers.push(forge_oci::tar_layer::LayerBlob {
             data: layer_data,
             digest: layer_digest.to_string(),
-            uncompressed_size: 0,
+            uncompressed_digest,
+            uncompressed_size: uncompressed.len() as u64,
         });
     }
 

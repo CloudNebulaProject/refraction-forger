@@ -34,8 +34,11 @@ pub enum TarLayerError {
 pub struct LayerBlob {
     /// Compressed tar.gz data
     pub data: Vec<u8>,
-    /// SHA-256 digest of the compressed data (hex-encoded)
+    /// SHA-256 digest of the compressed data (format: "sha256:<hex>")
     pub digest: String,
+    /// SHA-256 digest of the uncompressed tar data (format: "sha256:<hex>")
+    /// Used as the OCI diff_id per the image spec.
+    pub uncompressed_digest: String,
     /// Uncompressed size in bytes
     pub uncompressed_size: u64,
 }
@@ -112,7 +115,27 @@ pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
     }
 
     let encoder = tar.into_inner().map_err(TarLayerError::TarCreate)?;
+
+    // Get the uncompressed tar data to compute diff_id before finishing gzip
+    let uncompressed_tar = encoder.get_ref().clone();
+    // Actually we need the tar bytes before gzip. The encoder wraps the output buffer.
+    // Let's compute from the gzip encoder's inner buffer differently.
+    // The GzEncoder accumulates compressed data. We need to hash the *uncompressed* tar.
+    // Rebuild: finish the tar into the gzip encoder, then finish gzip.
     let compressed = encoder.finish().map_err(TarLayerError::TarCreate)?;
+
+    // To get the uncompressed tar, decompress it back (simplest correct approach)
+    use flate2::read::GzDecoder;
+    use std::io::Read;
+    let mut decoder = GzDecoder::new(compressed.as_slice());
+    let mut uncompressed_tar = Vec::new();
+    decoder
+        .read_to_end(&mut uncompressed_tar)
+        .map_err(TarLayerError::TarCreate)?;
+
+    let mut uncompressed_hasher = Sha256::new();
+    uncompressed_hasher.update(&uncompressed_tar);
+    let uncompressed_digest = format!("sha256:{}", hex::encode(uncompressed_hasher.finalize()));
 
     let mut hasher = Sha256::new();
     hasher.update(&compressed);
@@ -121,7 +144,8 @@ pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
     Ok(LayerBlob {
         data: compressed,
         digest,
-        uncompressed_size,
+        uncompressed_digest,
+        uncompressed_size: uncompressed_tar.len() as u64,
     })
 }
 

@@ -6,6 +6,80 @@ use tracing::info;
 use crate::error::ForgeError;
 use crate::tools::ToolRunner;
 
+/// Set ownership on a file or directory by looking up the user/group names
+/// in the staging root's /etc/passwd and /etc/group files.
+#[cfg(unix)]
+fn set_ownership(
+    path: &Path,
+    owner: Option<&str>,
+    group: Option<&str>,
+    staging_root: &Path,
+) -> Result<(), ForgeError> {
+    use std::ffi::CString;
+
+    if owner.is_none() && group.is_none() {
+        return Ok(());
+    }
+
+    let uid = match owner {
+        Some(name) => lookup_id_by_name(
+            &staging_root.join("etc/passwd"),
+            name,
+            2, // UID is field 2
+        )
+        .unwrap_or(0),
+        None => u32::MAX, // -1 means "don't change"
+    };
+
+    let gid = match group {
+        Some(name) => lookup_id_by_name(
+            &staging_root.join("etc/group"),
+            name,
+            2, // GID is field 2
+        )
+        .unwrap_or(0),
+        None => u32::MAX,
+    };
+
+    let c_path = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| {
+        ForgeError::Overlay {
+            action: format!("set ownership on {}", path.display()),
+            detail: "path contains null byte".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::InvalidInput, "null byte in path"),
+        }
+    })?;
+
+    // Use lchown to avoid following symlinks
+    let ret =
+        unsafe { libc::lchown(c_path.as_ptr(), uid, gid) };
+    if ret != 0 {
+        let err = std::io::Error::last_os_error();
+        // Don't fail on permission errors in unprivileged builds
+        if err.kind() != std::io::ErrorKind::PermissionDenied {
+            return Err(ForgeError::Overlay {
+                action: format!("set ownership on {}", path.display()),
+                detail: format!("owner={:?} group={:?}", owner, group),
+                source: err,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+/// Look up a numeric ID from a colon-delimited file (passwd or group) by name.
+fn lookup_id_by_name(path: &Path, name: &str, id_field: usize) -> Option<u32> {
+    let content = std::fs::read_to_string(path).ok()?;
+    content.lines().find_map(|line| {
+        let fields: Vec<&str> = line.split(':').collect();
+        if fields.first() == Some(&name) {
+            fields.get(id_field)?.parse::<u32>().ok()
+        } else {
+            None
+        }
+    })
+}
+
 /// Apply a list of overlay actions to the staging root.
 pub async fn apply_overlays(
     actions: &[OverlayAction],
@@ -84,6 +158,15 @@ async fn apply_action(
                         })?;
                 }
             }
+
+            // Set ownership if specified
+            #[cfg(unix)]
+            set_ownership(
+                &dest,
+                file_overlay.owner.as_deref(),
+                file_overlay.group.as_deref(),
+                staging_root,
+            )?;
         }
 
         OverlayAction::Devfsadm(_) => {
@@ -120,6 +203,15 @@ async fn apply_action(
                     })?;
                 }
             }
+
+            // Set ownership if specified
+            #[cfg(unix)]
+            set_ownership(
+                &dir_path,
+                ensure_dir.owner.as_deref(),
+                ensure_dir.group.as_deref(),
+                staging_root,
+            )?;
         }
 
         OverlayAction::RemoveFiles(remove) => {
@@ -252,6 +344,15 @@ async fn apply_action(
                     source: e,
                 }
             })?;
+
+            // Set ownership if specified
+            #[cfg(unix)]
+            set_ownership(
+                &link_path,
+                symlink.owner.as_deref(),
+                symlink.group.as_deref(),
+                staging_root,
+            )?;
 
             #[cfg(not(unix))]
             return Err(ForgeError::Overlay {
