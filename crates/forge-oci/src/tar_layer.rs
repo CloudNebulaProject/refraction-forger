@@ -46,7 +46,6 @@ pub struct LayerBlob {
 /// Create a tar.gz layer from a staging directory. All paths in the tar are
 /// relative to the staging root.
 pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
-    let mut uncompressed_size: u64 = 0;
     let buf = Vec::new();
     let encoder = GzEncoder::new(buf, Compression::default());
     let mut tar = tar::Builder::new(encoder);
@@ -73,7 +72,6 @@ pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
         })?;
 
         if metadata.is_file() {
-            uncompressed_size += metadata.len();
             let mut header = tar::Header::new_gnu();
             header.set_size(metadata.len());
             header.set_mode(0o644);
@@ -115,13 +113,6 @@ pub fn create_layer(staging_dir: &Path) -> Result<LayerBlob, TarLayerError> {
     }
 
     let encoder = tar.into_inner().map_err(TarLayerError::TarCreate)?;
-
-    // Get the uncompressed tar data to compute diff_id before finishing gzip
-    let uncompressed_tar = encoder.get_ref().clone();
-    // Actually we need the tar bytes before gzip. The encoder wraps the output buffer.
-    // Let's compute from the gzip encoder's inner buffer differently.
-    // The GzEncoder accumulates compressed data. We need to hash the *uncompressed* tar.
-    // Rebuild: finish the tar into the gzip encoder, then finish gzip.
     let compressed = encoder.finish().map_err(TarLayerError::TarCreate)?;
 
     // To get the uncompressed tar, decompress it back (simplest correct approach)
@@ -162,7 +153,11 @@ mod tests {
 
         assert!(layer.data.len() > 0);
         assert!(layer.digest.starts_with("sha256:"));
-        assert_eq!(layer.uncompressed_size, 0);
+        assert!(layer.uncompressed_digest.starts_with("sha256:"));
+        // Empty tar still has end-of-archive markers
+        assert!(layer.uncompressed_size > 0);
+        // Compressed and uncompressed digests must differ
+        assert_ne!(layer.digest, layer.uncompressed_digest);
     }
 
     #[test]
@@ -173,7 +168,9 @@ mod tests {
         let layer = create_layer(tmp.path()).unwrap();
 
         assert!(layer.digest.starts_with("sha256:"));
-        assert_eq!(layer.uncompressed_size, 13); // "Hello, world!" = 13 bytes
+        assert!(layer.uncompressed_digest.starts_with("sha256:"));
+        // Uncompressed tar is larger than just the file content (includes headers)
+        assert!(layer.uncompressed_size > 13);
         assert!(layer.data.len() > 0);
 
         // Verify we can decompress the gzip layer

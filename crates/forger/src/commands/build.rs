@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use forge_engine::output::{OutputHandler, OutputMode};
 use forge_engine::tools::SystemToolRunner;
 use forge_engine::BuildContext;
 use miette::{Context, IntoDiagnostic};
@@ -15,7 +16,10 @@ pub async fn run(
     use_builder: bool,
     skip_push: bool,
     builder_image: Option<&str>,
+    output_mode: OutputMode,
 ) -> miette::Result<()> {
+    let output = OutputHandler::new(output_mode);
+
     let kdl_content = std::fs::read_to_string(spec_path)
         .into_diagnostic()
         .wrap_err_with(|| format!("Failed to read spec file: {}", spec_path.display()))?;
@@ -43,6 +47,7 @@ pub async fn run(
         let needs = forge_builder::detect::needs_builder(&filtered, target, local);
         if needs || use_builder {
             info!("Delegating build to builder VM");
+            output.phase_start("Delegating build to builder VM");
             forge_builder::run_in_builder(
                 &filtered,
                 spec_path,
@@ -57,6 +62,7 @@ pub async fn run(
             .map_err(miette::Report::new)
             .wrap_err("Builder VM build failed")?;
 
+            output.phase_done("Builder VM build complete");
             println!("Build complete. Output: {}", output_dir.display());
             return Ok(());
         }
@@ -68,7 +74,7 @@ pub async fn run(
         let _ = (local, use_builder, builder_image);
     }
 
-    let runner = SystemToolRunner;
+    let runner = SystemToolRunner::new(output.clone());
 
     let ctx = BuildContext {
         spec: &filtered,
@@ -76,19 +82,17 @@ pub async fn run(
         output_dir,
         runner: &runner,
         skip_push,
+        output: output.clone(),
     };
 
-    info!(
-        spec = %spec_path.display(),
-        output = %output_dir.display(),
-        "Starting build"
-    );
+    output.phase_start(&format!("Building {}", spec_path.display()));
 
     ctx.build(target)
         .await
         .map_err(miette::Report::new)
         .wrap_err("Build failed")?;
 
+    output.phase_done("Build complete");
     println!("Build complete. Output: {}", output_dir.display());
     Ok(())
 }

@@ -3,6 +3,7 @@ mod commands;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use forge_engine::output::OutputMode;
 use miette::Result;
 use tracing_subscriber::EnvFilter;
 
@@ -13,6 +14,10 @@ use tracing_subscriber::EnvFilter;
     about = "Build optimized OS images and publish to OCI registries"
 )]
 struct Args {
+    /// Output format: pretty (default), json, or quiet
+    #[arg(long, global = true, default_value = "pretty")]
+    output: String,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -101,13 +106,26 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let output_mode: OutputMode = args
+        .output
+        .parse()
+        .map_err(|e: String| miette::miette!(e))?;
+
+    // Configure tracing based on output mode:
+    // - Json/Quiet: suppress tracing (output handler provides structured events)
+    // - Pretty: normal tracing with info level
+    let log_level = match output_mode {
+        OutputMode::Pretty => "info",
+        OutputMode::Json | OutputMode::Quiet => "warn",
+    };
+
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level)),
         )
         .init();
-
-    let args = Args::parse();
 
     match args.command {
         Commands::Build {
@@ -129,6 +147,7 @@ async fn main() -> Result<()> {
                 use_builder,
                 skip_push,
                 builder_image.as_deref(),
+                output_mode,
             )
             .await?;
         }

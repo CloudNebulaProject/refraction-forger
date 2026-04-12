@@ -12,6 +12,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::error::ForgeError;
+use crate::output::OutputHandler;
 
 /// Output from a tool execution.
 #[derive(Debug)]
@@ -30,8 +31,17 @@ pub trait ToolRunner: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = Result<ToolOutput, ForgeError>> + Send + 'a>>;
 }
 
-/// Real tool runner that uses `tokio::process::Command`.
-pub struct SystemToolRunner;
+/// Real tool runner that streams stdout/stderr line-by-line through an
+/// [`OutputHandler`] instead of buffering all output until completion.
+pub struct SystemToolRunner {
+    output: OutputHandler,
+}
+
+impl SystemToolRunner {
+    pub fn new(output: OutputHandler) -> Self {
+        Self { output }
+    }
+}
 
 impl ToolRunner for SystemToolRunner {
     fn run<'a>(
@@ -40,10 +50,16 @@ impl ToolRunner for SystemToolRunner {
         args: &'a [&'a str],
     ) -> Pin<Box<dyn Future<Output = Result<ToolOutput, ForgeError>> + Send + 'a>> {
         Box::pin(async move {
-            let output = tokio::process::Command::new(program)
+            use tokio::io::{AsyncBufReadExt, BufReader};
+            use tokio::process::Command;
+
+            self.output.tool_start(program, args);
+
+            let mut child = Command::new(program)
                 .args(args)
-                .output()
-                .await
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
                 .map_err(|e| ForgeError::ToolExecution {
                     tool: program.to_string(),
                     args: args.join(" "),
@@ -51,13 +67,75 @@ impl ToolRunner for SystemToolRunner {
                     source: e,
                 })?;
 
-            let result = ToolOutput {
-                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-                exit_code: output.status.code().unwrap_or(-1),
+            let stdout_pipe = child.stdout.take();
+            let stderr_pipe = child.stderr.take();
+
+            let mut stdout_lines = Vec::new();
+            let mut stderr_lines = Vec::new();
+
+            // Read stdout and stderr concurrently, streaming each line
+            let tool_name = program.to_string();
+            let output_handle = self.output.clone();
+
+            let stdout_task = {
+                let tool_name = tool_name.clone();
+                let output_handle = output_handle.clone();
+                tokio::spawn(async move {
+                    let mut lines = Vec::new();
+                    if let Some(pipe) = stdout_pipe {
+                        let reader = BufReader::new(pipe);
+                        let mut line_reader = reader.lines();
+                        while let Ok(Some(line)) = line_reader.next_line().await {
+                            output_handle.tool_output(&tool_name, "stdout", &line);
+                            lines.push(line);
+                        }
+                    }
+                    lines
+                })
             };
 
-            if !output.status.success() {
+            let stderr_task = {
+                let tool_name = tool_name.clone();
+                let output_handle = output_handle.clone();
+                tokio::spawn(async move {
+                    let mut lines = Vec::new();
+                    if let Some(pipe) = stderr_pipe {
+                        let reader = BufReader::new(pipe);
+                        let mut line_reader = reader.lines();
+                        while let Ok(Some(line)) = line_reader.next_line().await {
+                            output_handle.tool_output(&tool_name, "stderr", &line);
+                            lines.push(line);
+                        }
+                    }
+                    lines
+                })
+            };
+
+            // Wait for streams to drain and process to exit
+            if let Ok(lines) = stdout_task.await {
+                stdout_lines = lines;
+            }
+            if let Ok(lines) = stderr_task.await {
+                stderr_lines = lines;
+            }
+
+            let status = child.wait().await.map_err(|e| ForgeError::ToolExecution {
+                tool: program.to_string(),
+                args: args.join(" "),
+                stderr: String::new(),
+                source: e,
+            })?;
+
+            let exit_code = status.code().unwrap_or(-1);
+            self.output.tool_done(program, exit_code);
+
+            let result = ToolOutput {
+                stdout: stdout_lines.join("\n"),
+                stderr: stderr_lines.join("\n"),
+                exit_code,
+            };
+
+            if !status.success() {
                 return Err(ForgeError::ToolNonZero {
                     tool: program.to_string(),
                     args: args.join(" "),

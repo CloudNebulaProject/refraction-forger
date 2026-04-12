@@ -2,6 +2,7 @@
 #![allow(unused_assignments)]
 
 pub mod error;
+pub mod output;
 pub mod phase1;
 pub mod phase2;
 pub mod tools;
@@ -9,9 +10,9 @@ pub mod tools;
 use std::path::Path;
 
 use error::ForgeError;
+use output::OutputHandler;
 use spec_parser::schema::{DistroFamily, ImageSpec, Target, TargetKind};
 use tools::ToolRunner;
-use tracing::info;
 
 /// Context for running a build.
 pub struct BuildContext<'a> {
@@ -25,6 +26,8 @@ pub struct BuildContext<'a> {
     pub runner: &'a dyn ToolRunner,
     /// Skip OCI registry push after build (host-side push handles it instead).
     pub skip_push: bool,
+    /// Output handler for progress display.
+    pub output: OutputHandler,
 }
 
 impl<'a> BuildContext<'a> {
@@ -35,18 +38,22 @@ impl<'a> BuildContext<'a> {
         std::fs::create_dir_all(self.output_dir)?;
 
         for target in targets {
-            info!(target = %target.name, kind = %target.kind, "Building target");
+            self.output
+                .phase_start(&format!("Building target '{}' ({})", target.name, target.kind));
 
             match target.kind {
                 TargetKind::Qcow2 => {
                     self.build_qcow2(target).await?;
                 }
                 _ => {
-                    // OCI/Artifact: Phase 1 creates its own staging dir, Phase 2 packs from it
+                    self.output.phase_start("Phase 1: rootfs assembly");
                     let phase1_result =
                         phase1::execute(self.spec, self.files_dir, self.runner).await?;
+                    self.output.phase_done("Phase 1: rootfs assembly");
 
                     let distro = DistroFamily::from_distro_str(self.spec.distro.as_deref());
+                    self.output
+                        .phase_start(&format!("Phase 2: {} target production", target.kind));
                     phase2::execute(
                         target,
                         &phase1_result.staging_root,
@@ -55,10 +62,13 @@ impl<'a> BuildContext<'a> {
                         &distro,
                     )
                     .await?;
+                    self.output
+                        .phase_done(&format!("Phase 2: {} target production", target.kind));
                 }
             }
 
-            info!(target = %target.name, "Target built successfully");
+            self.output
+                .phase_done(&format!("Target '{}' built successfully", target.name));
         }
 
         Ok(())
@@ -66,26 +76,34 @@ impl<'a> BuildContext<'a> {
 
     /// QCOW2 build: prepare disk → populate rootfs directly → finalize → cleanup.
     async fn build_qcow2(&self, target: &Target) -> Result<(), ForgeError> {
-        // Phase 2 prepare: create disk image, partition/format, mount target filesystem
+        self.output.phase_start("Phase 2 prepare: disk image setup");
         let prepared =
             phase2::qcow2::prepare_qcow2(target, self.output_dir, self.runner).await?;
+        self.output.phase_done("Phase 2 prepare: disk image setup");
 
-        // Phase 1: populate directly into the mounted target filesystem
+        self.output.phase_start("Phase 1: rootfs assembly into target");
         let phase1_result =
             phase1::execute_into(self.spec, self.files_dir, self.runner, prepared.root_mount())
                 .await;
+        if phase1_result.is_ok() {
+            self.output.phase_done("Phase 1: rootfs assembly into target");
+        }
 
-        // Phase 2 finalize: install bootloader, unmount (only if Phase 1 succeeded)
+        self.output.phase_start("Phase 2 finalize: bootloader & unmount");
         let finalize_result = if phase1_result.is_ok() {
             phase2::qcow2::finalize_qcow2(&prepared, self.runner).await
         } else {
             Ok(())
         };
+        if finalize_result.is_ok() {
+            self.output.phase_done("Phase 2 finalize: bootloader & unmount");
+        }
 
-        // Cleanup always runs: detach loopback, convert if everything succeeded
+        self.output.phase_start("Cleanup: detach & convert");
         let convert = phase1_result.is_ok() && finalize_result.is_ok();
         let cleanup_result =
             phase2::qcow2::cleanup_qcow2(prepared, convert, self.runner).await;
+        self.output.phase_done("Cleanup: detach & convert");
 
         // Propagate errors in order of occurrence
         phase1_result?;
