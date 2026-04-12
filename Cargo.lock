@@ -3268,6 +3268,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vm-manager"
 version = "0.1.0"
+source = "git+https://code.aopc.cloud/CloudNebulaProject/vm-manager.git#548170cbe764fc319eb1ef99aab0199bf9c6d7a5"
 dependencies = [
  "dirs",
  "futures-util",
@@ -3275,7 +3276,6 @@ dependencies = [
  "libc",
  "miette 7.6.0",
  "oci-client",
- "openssl",
  "reqwest",
  "serde",
  "serde_json",

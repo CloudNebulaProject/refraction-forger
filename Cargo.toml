@@ -54,7 +54,7 @@ bytesize = "2"
 indicatif = "0.17"
 
 # Builder VM support
-vm-manager = { path = "../vm-manager/crates/vm-manager" }
+vm-manager = { git = "https://code.aopc.cloud/CloudNebulaProject/vm-manager.git" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "stream"] }
 libc = "0.2"
 dirs = "6"
