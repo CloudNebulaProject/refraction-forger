@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use forge_engine::output::{OutputHandler, OutputMode};
 use miette::{Context, IntoDiagnostic};
-use tracing::info;
 
 /// Push an OCI Image Layout or QCOW2 artifact to a registry.
 pub async fn run(
@@ -9,8 +9,10 @@ pub async fn run(
     reference: &str,
     auth_file: Option<&PathBuf>,
     artifact: bool,
+    output_mode: OutputMode,
 ) -> miette::Result<()> {
-    let auth = resolve_auth(auth_file)?;
+    let output = OutputHandler::new(output_mode);
+    let auth = resolve_auth(auth_file, reference)?;
 
     // Determine if we need insecure registries (localhost)
     let insecure = if reference.starts_with("localhost") || reference.starts_with("127.0.0.1") {
@@ -21,10 +23,10 @@ pub async fn run(
     };
 
     if artifact {
-        return push_artifact(image_dir, reference, &auth, &insecure).await;
+        return push_artifact(image_dir, reference, &auth, &insecure, &output).await;
     }
 
-    push_oci_layout(image_dir, reference, &auth, &insecure).await
+    push_oci_layout(image_dir, reference, &auth, &insecure, &output).await
 }
 
 /// Push a QCOW2 file directly as an OCI artifact.
@@ -33,12 +35,17 @@ async fn push_artifact(
     reference: &str,
     auth: &forge_oci::registry::AuthConfig,
     insecure: &[String],
+    output: &OutputHandler,
 ) -> miette::Result<()> {
-    info!(reference, path = %qcow2_path.display(), "Pushing QCOW2 artifact");
+    output.phase_start(&format!("Pushing QCOW2 artifact → {reference}"));
+    output.info(&format!("Reading {}", qcow2_path.display()));
 
     let qcow2_data = std::fs::read(qcow2_path)
         .into_diagnostic()
         .wrap_err_with(|| format!("Failed to read QCOW2 file: {}", qcow2_path.display()))?;
+
+    let size_mb = qcow2_data.len() as f64 / 1_048_576.0;
+    output.info(&format!("Image size: {size_mb:.1} MB"));
 
     let name = qcow2_path
         .file_stem()
@@ -54,13 +61,15 @@ async fn push_artifact(
         description: None,
     };
 
+    output.info("Uploading to registry...");
+
     let manifest_url =
         forge_oci::artifact::push_qcow2_artifact(reference, qcow2_data, &metadata, auth, insecure)
             .await
             .map_err(miette::Report::new)
             .wrap_err("Artifact push failed")?;
 
-    println!("Pushed artifact: {manifest_url}");
+    output.phase_done(&format!("Pushed → {manifest_url}"));
     Ok(())
 }
 
@@ -70,7 +79,10 @@ async fn push_oci_layout(
     reference: &str,
     auth: &forge_oci::registry::AuthConfig,
     insecure: &[String],
+    output: &OutputHandler,
 ) -> miette::Result<()> {
+    output.phase_start(&format!("Pushing OCI image → {reference}"));
+
     // Read the OCI Image Layout index.json
     let index_path = image_dir.join("index.json");
     let index_content = std::fs::read_to_string(&index_path)
@@ -119,6 +131,8 @@ async fn push_oci_layout(
         .as_array()
         .ok_or_else(|| miette::miette!("Missing layers in manifest"))?;
 
+    output.info(&format!("Uploading {} layer(s)...", layers_json.len()));
+
     let mut layers = Vec::new();
     for layer_desc in layers_json {
         let layer_digest = layer_desc["digest"]
@@ -152,20 +166,28 @@ async fn push_oci_layout(
         });
     }
 
-    info!(reference, "Pushing OCI image to registry");
-
     let manifest_url =
         forge_oci::registry::push_image(reference, layers, config_json, auth, insecure)
             .await
             .map_err(miette::Report::new)
             .wrap_err("Push failed")?;
 
-    println!("Pushed: {manifest_url}");
+    output.phase_done(&format!("Pushed → {manifest_url}"));
     Ok(())
 }
 
 /// Resolve authentication from an auth file or environment.
-fn resolve_auth(auth_file: Option<&PathBuf>) -> miette::Result<forge_oci::registry::AuthConfig> {
+///
+/// Auth file formats:
+///   - `{"username": "user", "password": "pass"}` → Basic auth
+///   - `{"token": "pat-value"}` → Basic auth with token (username from reference)
+///   - `{"token": "pat-value", "username": "user"}` → Basic auth with explicit username
+///
+/// Fallback: `GITHUB_TOKEN` env var for ghcr.io, otherwise anonymous.
+fn resolve_auth(
+    auth_file: Option<&PathBuf>,
+    reference: &str,
+) -> miette::Result<forge_oci::registry::AuthConfig> {
     if let Some(auth_path) = auth_file {
         let auth_content = std::fs::read_to_string(auth_path)
             .into_diagnostic()
@@ -174,23 +196,40 @@ fn resolve_auth(auth_file: Option<&PathBuf>) -> miette::Result<forge_oci::regist
         let auth_json: serde_json::Value =
             serde_json::from_str(&auth_content).into_diagnostic()?;
 
-        if let Some(token) = auth_json["token"].as_str() {
-            Ok(forge_oci::registry::AuthConfig::Bearer {
-                token: token.to_string(),
-            })
-        } else if let (Some(user), Some(pass)) = (
+        // Explicit username + password → Basic auth
+        if let (Some(user), Some(pass)) = (
             auth_json["username"].as_str(),
             auth_json["password"].as_str(),
         ) {
-            Ok(forge_oci::registry::AuthConfig::Basic {
+            return Ok(forge_oci::registry::AuthConfig::Basic {
                 username: user.to_string(),
                 password: pass.to_string(),
-            })
-        } else {
-            Ok(forge_oci::registry::AuthConfig::Anonymous)
+            });
         }
+
+        // Token-based: use as Basic auth password (most registries including
+        // Forgejo, Gitea, and GHCR accept PATs via Basic auth)
+        if let Some(token) = auth_json["token"].as_str() {
+            let username = auth_json["username"]
+                .as_str()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| infer_username_from_reference(reference));
+
+            return Ok(forge_oci::registry::AuthConfig::Basic {
+                username,
+                password: token.to_string(),
+            });
+        }
+
+        Ok(forge_oci::registry::AuthConfig::Anonymous)
     } else {
         // Try GITHUB_TOKEN for ghcr.io
         Ok(forge_oci::artifact::resolve_ghcr_auth())
     }
+}
+
+/// Infer a username from the registry reference for token-based auth.
+/// Most registries accept any non-empty username with a PAT as password.
+fn infer_username_from_reference(_reference: &str) -> String {
+    "forger".to_string()
 }

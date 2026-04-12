@@ -1,0 +1,64 @@
+metadata name="ubuntu-docker" version="1.0.0" description="Ubuntu 22.04 VM with Docker"
+
+distro "ubuntu-22.04"
+
+repositories {
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-updates" components="main universe"
+    apt-mirror "http://archive.ubuntu.com/ubuntu" suite="jammy-security" components="main universe"
+}
+
+packages {
+    // Core system
+    package "linux-image-generic"
+    package "grub-efi-amd64"
+    package "openssh-server"
+    package "cloud-init"
+    package "cloud-guest-utils"
+    package "ca-certificates"
+    package "curl"
+    package "gnupg"
+
+    // Docker (from Ubuntu universe — docker.io is the distro-maintained package)
+    package "docker.io"
+    package "docker-compose"
+    package "containerd"
+
+    // Utilities
+    package "git"
+    package "jq"
+    package "htop"
+    package "vim"
+    package "sudo"
+}
+
+customization {
+    user "admin"
+}
+
+overlays {
+    // Set root password
+    shadow username="root" password="$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9"
+
+    // Ensure admin home directory
+    ensure-dir "/home/admin" owner="admin" group="admin" mode="755"
+    ensure-dir "/home/admin/.ssh" owner="admin" group="admin" mode="700"
+
+    // Enable Docker for admin user by adding to docker group
+    // (docker group is created by the docker.io package)
+    file destination="/etc/sudoers.d/admin" source="ubuntu-docker/sudoers-admin"
+}
+
+builder {
+    image "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+
+target "qcow2" kind="qcow2" {
+    disk-size "10G"
+    bootloader "grub"
+    filesystem "ext4"
+    push-to "code.aopc.cloud/cloudnebulaproject/ubuntu-docker:latest"
+}

@@ -163,7 +163,7 @@ async fn main() -> Result<()> {
             auth_file,
             artifact,
         } => {
-            commands::push::run(&image, &reference, auth_file.as_ref(), artifact).await?;
+            commands::push::run(&image, &reference, auth_file.as_ref(), artifact, output_mode).await?;
         }
         Commands::Targets { spec } => {
             commands::targets::run(&spec)?;
