@@ -13,6 +13,7 @@ packages {
     package "linux-image-generic"
     package "initramfs-tools"
     package "grub-efi-amd64"
+    package "grub-pc-bin"
     package "openssh-server"
     package "cloud-init"
     package "cloud-guest-utils"

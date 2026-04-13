@@ -49,28 +49,28 @@ pub async fn prepare_ext4(
     let device = crate::tools::loopback::attach(runner, raw_str).await?;
     let _ = crate::tools::loopback::partprobe(runner, &device).await;
 
-    info!(device = %device, "Step 3: Creating GPT partition table");
-    let (efi_part, root_part) =
-        crate::tools::partition::create_gpt_efi_root(runner, &device).await?;
+    info!(device = %device, "Step 3: Creating GPT partition table (BIOS boot + EFI + root)");
+    let parts = crate::tools::partition::create_gpt_efi_root(runner, &device).await?;
 
     crate::tools::loopback::partprobe(runner, &device).await?;
 
     info!("Step 4: Formatting partitions");
-    crate::tools::partition::mkfs_fat32(runner, &efi_part).await?;
-    crate::tools::partition::mkfs_ext4(runner, &root_part).await?;
+    // BIOS boot partition (p1) is not formatted — GRUB writes raw data to it
+    crate::tools::partition::mkfs_fat32(runner, &parts.efi_part).await?;
+    crate::tools::partition::mkfs_ext4(runner, &parts.root_part).await?;
 
     let mount_dir = tempfile::tempdir().map_err(ForgeError::StagingSetup)?;
     let mount_str = mount_dir.path().to_str().unwrap();
 
     info!("Step 5: Mounting root partition at {}", mount_str);
-    crate::tools::partition::mount(runner, &root_part, mount_str).await?;
+    crate::tools::partition::mount(runner, &parts.root_part, mount_str).await?;
 
     Ok(PreparedExt4 {
         raw_path,
         qcow2_path,
         device,
-        efi_part,
-        root_part,
+        efi_part: parts.efi_part,
+        root_part: parts.root_part,
         mount_dir,
     })
 }
@@ -116,7 +116,8 @@ pub async fn finalize_ext4(
     crate::tools::partition::bind_mount(runner, "/proc", &proc_mount).await?;
     crate::tools::partition::bind_mount(runner, "/sys", &sys_mount).await?;
 
-    info!("Finalize step 4: Installing GRUB bootloader");
+    info!("Finalize step 4: Installing GRUB bootloader (BIOS + UEFI)");
+    // UEFI: install to the EFI System Partition
     runner
         .run(
             "chroot",
@@ -129,6 +130,27 @@ pub async fn finalize_ext4(
             ],
         )
         .await?;
+
+    // BIOS: install to the disk device (uses the BIOS boot partition automatically)
+    // The loopback device is visible via the bind-mounted /dev
+    let bios_result = runner
+        .run(
+            "chroot",
+            &[
+                mount_str,
+                "/usr/sbin/grub-install",
+                "--target=i386-pc",
+                &prepared.device,
+            ],
+        )
+        .await;
+    match bios_result {
+        Ok(_) => info!("BIOS GRUB installed successfully"),
+        Err(e) => {
+            // BIOS GRUB install is best-effort — may fail if grub-pc-bin is not installed
+            info!("BIOS GRUB install skipped (grub-pc-bin may not be installed): {e}");
+        }
+    }
 
     // Regenerate initramfs to pick up any modules added by overlays (e.g., virtio drivers).
     // Only relevant for Linux images that have update-initramfs.

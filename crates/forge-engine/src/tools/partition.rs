@@ -2,36 +2,57 @@ use crate::error::ForgeError;
 use crate::tools::ToolRunner;
 use tracing::info;
 
-/// Create a GPT partition table with an EFI system partition and a root partition.
+/// Partition layout result for a dual BIOS+UEFI GPT disk.
+pub struct GptPartitions {
+    /// BIOS boot partition (1MB, type ef02) — holds GRUB i386-pc stage
+    pub bios_part: String,
+    /// EFI System Partition (512MB, type EF00) — holds GRUB x86_64-efi
+    pub efi_part: String,
+    /// Root partition (remainder, type 8300)
+    pub root_part: String,
+}
+
+/// Create a GPT partition table with BIOS boot, EFI, and root partitions.
 ///
-/// Returns the partition device paths as (efi_part, root_part).
+/// This layout supports both legacy BIOS and UEFI boot:
+/// - Partition 1: 1MB BIOS boot (ef02) for `grub-install --target=i386-pc`
+/// - Partition 2: 512MB EFI System Partition for `grub-install --target=x86_64-efi`
+/// - Partition 3: Root filesystem (remainder)
+///
 /// Assumes the device is a loopback device like `/dev/loopN`.
 pub async fn create_gpt_efi_root(
     runner: &dyn ToolRunner,
     device: &str,
-) -> Result<(String, String), ForgeError> {
-    info!(device, "Creating GPT partition table with EFI + root");
+) -> Result<GptPartitions, ForgeError> {
+    info!(device, "Creating GPT partition table with BIOS boot + EFI + root");
 
     // Zap any existing partition table
     runner.run("sgdisk", &["--zap-all", device]).await?;
 
-    // Create EFI partition (512M, type EF00) and root partition (remainder, type 8300)
+    // Create three partitions:
+    // 1: 1MB BIOS boot partition (ef02) — required for GRUB i386-pc on GPT
+    // 2: 512MB EFI System Partition (EF00)
+    // 3: Root partition (remainder, type 8300)
     runner
         .run(
             "sgdisk",
             &[
-                "-n", "1:0:+512M",
-                "-t", "1:EF00",
-                "-n", "2:0:0",
-                "-t", "2:8300",
+                "-n", "1:0:+1M",
+                "-t", "1:EF02",
+                "-n", "2:0:+512M",
+                "-t", "2:EF00",
+                "-n", "3:0:0",
+                "-t", "3:8300",
                 device,
             ],
         )
         .await?;
 
-    let efi_part = format!("{device}p1");
-    let root_part = format!("{device}p2");
-    Ok((efi_part, root_part))
+    Ok(GptPartitions {
+        bios_part: format!("{device}p1"),
+        efi_part: format!("{device}p2"),
+        root_part: format!("{device}p3"),
+    })
 }
 
 /// Format a partition as FAT32.
@@ -124,18 +145,23 @@ mod tests {
     #[tokio::test]
     async fn test_create_gpt_efi_root_args() {
         let runner = MockToolRunner::new();
-        let (efi, root) = create_gpt_efi_root(&runner, "/dev/loop0").await.unwrap();
+        let parts = create_gpt_efi_root(&runner, "/dev/loop0").await.unwrap();
 
-        assert_eq!(efi, "/dev/loop0p1");
-        assert_eq!(root, "/dev/loop0p2");
+        assert_eq!(parts.bios_part, "/dev/loop0p1");
+        assert_eq!(parts.efi_part, "/dev/loop0p2");
+        assert_eq!(parts.root_part, "/dev/loop0p3");
 
         let calls = runner.calls();
         assert_eq!(calls.len(), 2);
         assert_eq!(calls[0].0, "sgdisk");
         assert_eq!(calls[0].1, vec!["--zap-all", "/dev/loop0"]);
         assert_eq!(calls[1].0, "sgdisk");
-        assert!(calls[1].1.contains(&"-n".to_string()));
-        assert!(calls[1].1.contains(&"1:0:+512M".to_string()));
+        // BIOS boot partition
+        assert!(calls[1].1.contains(&"1:0:+1M".to_string()));
+        assert!(calls[1].1.contains(&"1:EF02".to_string()));
+        // EFI System Partition
+        assert!(calls[1].1.contains(&"2:0:+512M".to_string()));
+        assert!(calls[1].1.contains(&"2:EF00".to_string()));
     }
 
     #[tokio::test]
