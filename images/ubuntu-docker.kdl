@@ -40,13 +40,33 @@ overlays {
     // Set root password
     shadow username="root" password="$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9"
 
-    // Ensure admin home directory
+    // Admin user setup
     ensure-dir "/home/admin" owner="admin" group="admin" mode="755"
     ensure-dir "/home/admin/.ssh" owner="admin" group="admin" mode="700"
-
-    // Enable Docker for admin user by adding to docker group
-    // (docker group is created by the docker.io package)
     file destination="/etc/sudoers.d/admin" source="ubuntu-docker/sudoers-admin"
+
+    // --- Serial console ---
+    // GRUB: output to both VGA and serial (ttyS0 @ 115200)
+    file destination="/etc/default/grub" source="ubuntu-docker/grub-default"
+    // Systemd serial getty on ttyS0
+    file destination="/etc/systemd/system/serial-getty@ttyS0.service" source="ubuntu-docker/serial-getty-ttyS0.conf"
+    // Enable the serial getty (symlink into getty.target.wants)
+    ensure-dir "/etc/systemd/system/getty.target.wants" owner="root" group="root" mode="755"
+    ensure-symlink "/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service" target="/etc/systemd/system/serial-getty@ttyS0.service"
+
+    // --- Cloud-init: clean state so it re-runs on first boot ---
+    // Remove instance state from the build
+    remove-files dir="/var/lib/cloud"
+    // Re-create empty directory structure cloud-init expects
+    ensure-dir "/var/lib/cloud" owner="root" group="root" mode="755"
+    // Datasource configuration
+    file destination="/etc/cloud/cloud.cfg.d/90_dpkg.cfg" source="ubuntu-docker/cloud-init-datasources"
+
+    // Remove SSH host keys (cloud-init regenerates them on first boot)
+    remove-files pattern="/etc/ssh/ssh_host_*"
+
+    // Truncate machine-id so systemd regenerates it on first boot
+    file destination="/etc/machine-id"
 }
 
 builder {

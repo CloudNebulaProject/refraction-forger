@@ -1,0 +1,3 @@
+# /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+# Reset datasource list to auto-detect on first boot
+datasource_list: [ NoCloud, ConfigDrive, OpenStack, GCE, Azure, Ec2, None ]
