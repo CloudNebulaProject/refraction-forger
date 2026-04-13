@@ -202,8 +202,9 @@ fn merge_base(mut base: ImageSpec, child: ImageSpec) -> ImageSpec {
     base.customizations.extend(child.customizations);
     base.overlays.extend(child.overlays);
 
-    // includes: already resolved, don't carry forward
-    base.includes = Vec::new();
+    // includes: base includes are already resolved, but child includes
+    // still need to be processed by the resolver
+    base.includes = child.includes;
 
     // targets: child's targets replace base entirely
     if !child.targets.is_empty() {

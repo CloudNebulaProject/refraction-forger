@@ -28,7 +28,7 @@ impl DistroFamily {
 
 #[derive(Debug, Decode)]
 pub struct ImageSpec {
-    #[knuffel(child)]
+    #[knuffel(child, default)]
     pub metadata: Metadata,
 
     #[knuffel(child, unwrap(argument))]
@@ -40,7 +40,7 @@ pub struct ImageSpec {
     #[knuffel(child, unwrap(argument))]
     pub build_host: Option<String>,
 
-    #[knuffel(child)]
+    #[knuffel(child, default)]
     pub repositories: Repositories,
 
     #[knuffel(child, unwrap(argument))]
@@ -87,17 +87,17 @@ pub struct BuilderNode {
     pub disk: Option<u32>,
 }
 
-#[derive(Debug, Decode)]
+#[derive(Debug, Default, Decode)]
 pub struct Metadata {
-    #[knuffel(property)]
+    #[knuffel(property, default)]
     pub name: String,
-    #[knuffel(property)]
+    #[knuffel(property, default)]
     pub version: String,
     #[knuffel(property)]
     pub description: Option<String>,
 }
 
-#[derive(Debug, Decode)]
+#[derive(Debug, Default, Decode)]
 pub struct Repositories {
     #[knuffel(children(name = "publisher"))]
     pub publishers: Vec<Publisher>,

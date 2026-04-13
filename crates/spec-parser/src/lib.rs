@@ -21,7 +21,7 @@ pub enum ParseError {
 impl From<knuffel::Error> for ParseError {
     fn from(err: knuffel::Error) -> Self {
         ParseError::KdlError {
-            detail: err.to_string(),
+            detail: format!("{err:?}"),
         }
     }
 }

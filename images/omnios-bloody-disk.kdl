@@ -1,36 +1,11 @@
-// OmniOS bloody final disk image target (ported from image-builder JSON)
-// Source JSON reference (abridged):
-// {
-//   "pool": { "name": "rpool", "ashift": 12, "uefi": true, "size": 2000 },
-//   "steps": [
-//     { "t": "create_be" },
-//     { "t": "unpack_tar", "name": "omnios-stable-r${release}.tar" },
-//     { "t": "include", "name": "devfs" },
-//     { "t": "assemble_files", "dir": "/etc/versions", "output": "/etc/versions/build", "prefix": "build." },
-//     { "t": "make_bootable" },
-//     { "t": "include", "name": "common" },
-//     { "t": "ensure_file", "file": "/boot/conf.d/console", "src": "boot_console.${console}", "owner": "root", "group": "root", "mode": "644" },
-//     { "t": "ensure_file", "file": "/etc/ttydefs", "src": "ttydefs.115200", "owner": "root", "group": "sys", "mode": "644" },
-//     { "t": "ensure_file", "file": "/etc/default/init", "src": "default_init.utc", "owner": "root", "group": "root", "mode": "644" },
-//     { "t": "shadow", "username": "root", "password": "$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9" },
-//     { "t": "include", "name": "finalise" }
-//   ]
-// }
-// Notes:
-// - The refraction KDL schema doesn’t model the step DSL directly; we express the
-//   relevant parts via includes, overlays, and target settings.
-// - UEFI + disk size are mapped to the target stanza. Pool properties are now
-//   modeled via a pool { property name=".." value=".." } block under target.
-// - Finalizers are implicit per the toolchain and don’t need to be listed.
+metadata name="omnios-bloody-disk" version="0.0.1" description="OmniOS bloody bootable qcow2 image"
 
-metadata name="omnios-bloody-disk" version="0.0.1" description="OmniOS bloody: bootable qcow2 target from base spec"
+distro "omnios"
+base "omnios-bloody-base.kdl"
+include "devfs.kdl"
+include "common.kdl"
 
-// Derive from the base publisher/variant/cert configuration and base packages
-base "images/omnios-bloody-base.kdl"
-
-// Device filesystem overlays and common system files
-include "images/devfs.kdl"
-include "images/common.kdl"
+repositories {}
 
 packages {
     package "/system/management/cloud-init"
@@ -41,30 +16,26 @@ packages {
     package "/driver/storage/vioscsi"
 }
 
-// Files that the original JSON ensured
 overlays {
-    // Console configuration (115200 by default)
-    file destination="/boot/conf.d/console" source="boot_console.115200" owner="root" group="root" mode="644"
-
-    // TTY speed definitions
+    file destination="/boot/conf.d/console" source="boot_console.ttya" owner="root" group="root" mode="644"
     file destination="/etc/ttydefs" source="ttydefs.115200" owner="root" group="sys" mode="644"
-
-    // Init defaults (UTC timezone)
     file destination="/etc/default/init" source="default_init.utc" owner="root" group="root" mode="644"
-
-    // Fallback local login: set a default root password in /etc/shadow
-    // This is used only if cloud-init (or metadata) fails to provision credentials
     shadow username="root" password="$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9"
 }
 
-// Bootable qcow2 disk image; size is 2000 MB; use UEFI bootloader
+builder {
+    image "https://downloads.omnios.org/media/bloody/omnios-bloody-20251111.cloud.raw.zst"
+    vcpus 4
+    memory 4096
+    disk 20
+}
+
 target "qcow2" kind="qcow2" {
     disk-size "2000M"
     bootloader "uefi"
-
-    // ZFS pool properties for the created rpool
+    filesystem "zfs"
+    push-to "code.aopc.cloud/cloudnebulaproject/omnios-bloody:latest"
     pool {
-        // Match original JSON: ashift=12
         property name="ashift" value="12"
     }
 }
