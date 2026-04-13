@@ -11,6 +11,7 @@ repositories {
 packages {
     // Core system
     package "linux-image-generic"
+    package "initramfs-tools"
     package "grub-efi-amd64"
     package "openssh-server"
     package "cloud-init"
@@ -44,6 +45,9 @@ overlays {
     ensure-dir "/home/admin" owner="admin" group="admin" mode="755"
     ensure-dir "/home/admin/.ssh" owner="admin" group="admin" mode="700"
     file destination="/etc/sudoers.d/admin" source="ubuntu-docker/sudoers-admin"
+
+    // --- Initramfs: include virtio drivers for VM boot ---
+    file destination="/etc/initramfs-tools/modules" source="ubuntu-docker/initramfs-modules"
 
     // --- Serial console ---
     // GRUB: output to both VGA and serial (ttyS0 @ 115200)

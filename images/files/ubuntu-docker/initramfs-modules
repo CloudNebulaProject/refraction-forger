@@ -1,0 +1,5 @@
+virtio_pci
+virtio_blk
+virtio_net
+virtio_scsi
+virtio_console
