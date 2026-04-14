@@ -11,7 +11,12 @@ use crate::tools::ToolRunner;
 pub struct PreparedZfs {
     pub raw_path: PathBuf,
     pub qcow2_path: PathBuf,
+    /// Loopback device for the raw disk (e.g., /dev/lofi/1 or /dev/loop0).
     pub device: String,
+    /// EFI System Partition device (e.g., /dev/lofi/1p2 or /dev/loop0p2).
+    pub efi_part: String,
+    /// ZFS partition device (e.g., /dev/lofi/1p3 or /dev/loop0p3).
+    pub zfs_part: String,
     /// Build-time pool name (unique to avoid collision with host's rpool).
     pub pool_name: String,
     /// Final pool name for the output image (typically "rpool").
@@ -79,8 +84,16 @@ pub async fn prepare_zfs(
     info!("Step 2: Attaching loopback device");
     let device = crate::tools::loopback::attach(runner, raw_str).await?;
 
-    info!(device = %device, "Step 3: Creating ZFS pool");
-    crate::tools::zpool::create(runner, &pool_name, &device, &pool_props).await?;
+    info!(device = %device, "Step 3: Creating GPT partition table (BIOS boot + EFI + ZFS)");
+    let parts = crate::tools::partition::create_gpt_efi_root(runner, &device).await?;
+    crate::tools::loopback::partprobe(runner, &device).await?;
+
+    // Format the EFI System Partition
+    info!("Step 3a: Formatting EFI System Partition");
+    crate::tools::partition::mkfs_fat32(runner, &parts.efi_part).await?;
+
+    info!(device = %parts.root_part, "Step 4: Creating ZFS pool on partition");
+    crate::tools::zpool::create(runner, &pool_name, &parts.root_part, &pool_props).await?;
 
     info!("Step 4: Creating boot environment structure");
     crate::tools::zfs::create(
@@ -109,6 +122,8 @@ pub async fn prepare_zfs(
         raw_path,
         qcow2_path,
         device,
+        efi_part: parts.efi_part,
+        zfs_part: parts.root_part,
         pool_name,
         final_pool_name,
         be_dataset,
@@ -125,7 +140,14 @@ pub async fn finalize_zfs(
 ) -> Result<(), ForgeError> {
     let mount_str = prepared.mount_dir.path().to_str().unwrap();
 
-    info!("Finalize step 1: Installing bootloader");
+    // Mount the ESP inside the BE root so bootadm/loader can find it
+    info!("Finalize step 1: Mounting EFI System Partition");
+    let efi_mount = prepared.mount_dir.path().join("boot/efi");
+    std::fs::create_dir_all(&efi_mount)?;
+    let efi_mount_str = efi_mount.to_str().unwrap();
+    crate::tools::partition::mount(runner, &prepared.efi_part, efi_mount_str).await?;
+
+    info!("Finalize step 2: Installing bootloader");
     crate::tools::bootloader::install(
         runner,
         mount_str,
@@ -134,10 +156,13 @@ pub async fn finalize_zfs(
     )
     .await?;
 
-    info!("Finalize step 2: Setting bootfs property");
+    info!("Finalize step 3: Setting bootfs property");
     crate::tools::zpool::set(runner, &prepared.pool_name, "bootfs", &prepared.be_dataset).await?;
 
-    info!("Finalize step 3: Unmounting and exporting ZFS pool");
+    info!("Finalize step 4: Unmounting ESP");
+    crate::tools::partition::umount(runner, efi_mount_str).await?;
+
+    info!("Finalize step 5: Unmounting and exporting ZFS pool");
     crate::tools::zfs::unmount(runner, &prepared.be_dataset).await?;
     crate::tools::zpool::export(runner, &prepared.pool_name).await?;
 
@@ -153,11 +178,11 @@ pub async fn finalize_zfs(
         info!(
             build_name = %prepared.pool_name,
             final_name = %prepared.final_pool_name,
-            "Finalize step 4: Renaming pool to final name"
+            "Finalize step 6: Renaming pool to final name"
         );
         match crate::tools::zpool::rename_exported(
             runner,
-            &prepared.device,
+            &prepared.zfs_part,
             &prepared.pool_name,
             &prepared.final_pool_name,
         )
