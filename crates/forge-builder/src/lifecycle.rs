@@ -74,6 +74,7 @@ resize_rootfs: true
                 hostname: Some("builder".to_string()),
             }),
             ssh: Some(ssh_config.clone()),
+            uefi: false,
         };
 
         // 5. Prepare + start VM
