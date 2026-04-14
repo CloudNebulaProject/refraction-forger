@@ -84,16 +84,18 @@ pub async fn prepare_zfs(
     info!("Step 2: Attaching loopback device");
     let device = crate::tools::loopback::attach(runner, raw_str).await?;
 
-    info!(device = %device, "Step 3: Creating GPT partition table (BIOS boot + EFI + ZFS)");
-    let parts = crate::tools::partition::create_gpt_efi_root(runner, &device).await?;
-    crate::tools::loopback::partprobe(runner, &device).await?;
+    // Use zpool create -B to create a whole-disk pool with GPT + ESP.
+    // On illumos, -B creates: BIOS boot partition, EFI System Partition, and
+    // ZFS partition — all managed by zpool automatically. bootadm then
+    // installs the loader into the ESP.
+    info!(device = %device, "Step 3: Creating ZFS pool with boot partitions (-B)");
+    crate::tools::zpool::create_bootable(runner, &pool_name, &device, &pool_props).await?;
 
-    // Format the EFI System Partition
-    info!("Step 3a: Formatting EFI System Partition");
-    crate::tools::partition::mkfs_fat32(runner, &parts.efi_part).await?;
-
-    info!(device = %parts.root_part, "Step 4: Creating ZFS pool on partition");
-    crate::tools::zpool::create(runner, &pool_name, &parts.root_part, &pool_props).await?;
+    // Discover the ESP partition device. On illumos lofi, partitions are
+    // named like /dev/lofi/1p0 (BIOS boot), /dev/lofi/1p1 (ESP), etc.
+    // The EFI System Partition is the one zpool creates as p1 (second GPT partition).
+    let efi_part = format!("{device}p1");
+    let zfs_part = format!("{device}p2");
 
     info!("Step 4: Creating boot environment structure");
     crate::tools::zfs::create(
@@ -122,8 +124,8 @@ pub async fn prepare_zfs(
         raw_path,
         qcow2_path,
         device,
-        efi_part: parts.efi_part,
-        zfs_part: parts.root_part,
+        efi_part,
+        zfs_part,
         pool_name,
         final_pool_name,
         be_dataset,

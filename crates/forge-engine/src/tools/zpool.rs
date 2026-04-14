@@ -32,6 +32,40 @@ pub async fn create(
     Ok(())
 }
 
+/// Create a bootable ZFS pool with GPT + EFI System Partition.
+///
+/// Uses `zpool create -B` which tells illumos to set up the disk with
+/// a BIOS boot partition, EFI System Partition, and ZFS partition.
+/// This is the idiomatic way to create bootable ZFS pools on illumos.
+pub async fn create_bootable(
+    runner: &dyn ToolRunner,
+    pool_name: &str,
+    device: &str,
+    properties: &[(&str, &str)],
+) -> Result<(), ForgeError> {
+    info!(pool_name, device, "Creating bootable ZFS pool (-B)");
+    let mut args = vec!["create", "-B"];
+
+    // Suppress default mountpoint
+    args.extend_from_slice(&["-m", "none"]);
+
+    // Add -o property=value for each pool property
+    let prop_strings: Vec<String> = properties
+        .iter()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect();
+    for prop in &prop_strings {
+        args.push("-o");
+        args.push(prop);
+    }
+
+    args.push(pool_name);
+    args.push(device);
+
+    runner.run("zpool", &args).await?;
+    Ok(())
+}
+
 /// Export a ZFS pool.
 pub async fn export(runner: &dyn ToolRunner, pool_name: &str) -> Result<(), ForgeError> {
     info!(pool_name, "Exporting ZFS pool");
