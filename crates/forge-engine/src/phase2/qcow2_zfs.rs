@@ -84,18 +84,16 @@ pub async fn prepare_zfs(
     info!("Step 2: Attaching loopback device");
     let device = crate::tools::loopback::attach(runner, raw_str).await?;
 
-    // Use zpool create -B to create a whole-disk pool with GPT + ESP.
-    // On illumos, -B creates: BIOS boot partition, EFI System Partition, and
-    // ZFS partition — all managed by zpool automatically. bootadm then
-    // installs the loader into the ESP.
-    info!(device = %device, "Step 3: Creating ZFS pool with boot partitions (-B)");
-    crate::tools::zpool::create_bootable(runner, &pool_name, &device, &pool_props).await?;
+    // Create a whole-disk ZFS pool. bootadm install-bootloader will later
+    // set up the UEFI ESP on this disk — it knows how to manage the EFI
+    // System Partition on the pool's device via the -M flag.
+    info!(device = %device, "Step 3: Creating ZFS pool");
+    crate::tools::zpool::create(runner, &pool_name, &device, &pool_props).await?;
 
-    // Discover the ESP partition device. On illumos lofi, partitions are
-    // named like /dev/lofi/1p0 (BIOS boot), /dev/lofi/1p1 (ESP), etc.
-    // The EFI System Partition is the one zpool creates as p1 (second GPT partition).
-    let efi_part = format!("{device}p1");
-    let zfs_part = format!("{device}p2");
+    // ESP and ZFS partition paths — on illumos, bootadm creates these when
+    // it runs install-bootloader with -M. For now track them for the finalize step.
+    let efi_part = format!("{device}s0");
+    let zfs_part = device.clone();
 
     info!("Step 4: Creating boot environment structure");
     crate::tools::zfs::create(
@@ -142,14 +140,10 @@ pub async fn finalize_zfs(
 ) -> Result<(), ForgeError> {
     let mount_str = prepared.mount_dir.path().to_str().unwrap();
 
-    // Mount the ESP inside the BE root so bootadm/loader can find it
-    info!("Finalize step 1: Mounting EFI System Partition");
-    let efi_mount = prepared.mount_dir.path().join("boot/efi");
-    std::fs::create_dir_all(&efi_mount)?;
-    let efi_mount_str = efi_mount.to_str().unwrap();
-    crate::tools::partition::mount(runner, &prepared.efi_part, efi_mount_str).await?;
-
-    info!("Finalize step 2: Installing bootloader");
+    // bootadm install-bootloader with -M flag manages the EFI System
+    // Partition automatically — it creates, formats, mounts the ESP, installs
+    // the illumos loader, and unmounts it. No manual ESP mounting needed.
+    info!("Finalize step 1: Installing bootloader");
     crate::tools::bootloader::install(
         runner,
         mount_str,
@@ -158,13 +152,10 @@ pub async fn finalize_zfs(
     )
     .await?;
 
-    info!("Finalize step 3: Setting bootfs property");
+    info!("Finalize step 2: Setting bootfs property");
     crate::tools::zpool::set(runner, &prepared.pool_name, "bootfs", &prepared.be_dataset).await?;
 
-    info!("Finalize step 4: Unmounting ESP");
-    crate::tools::partition::umount(runner, efi_mount_str).await?;
-
-    info!("Finalize step 5: Unmounting and exporting ZFS pool");
+    info!("Finalize step 3: Unmounting and exporting ZFS pool");
     crate::tools::zfs::unmount(runner, &prepared.be_dataset).await?;
     crate::tools::zpool::export(runner, &prepared.pool_name).await?;
 
@@ -180,7 +171,7 @@ pub async fn finalize_zfs(
         info!(
             build_name = %prepared.pool_name,
             final_name = %prepared.final_pool_name,
-            "Finalize step 6: Renaming pool to final name"
+            "Finalize step 4: Renaming pool to final name"
         );
         match crate::tools::zpool::rename_exported(
             runner,
