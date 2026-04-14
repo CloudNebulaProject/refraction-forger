@@ -81,19 +81,23 @@ pub async fn prepare_zfs(
     info!(disk_size, "Step 1: Creating raw disk image");
     crate::tools::qemu_img::create_raw(runner, raw_str, disk_size).await?;
 
-    info!("Step 2: Attaching loopback device");
-    let device = crate::tools::loopback::attach(runner, raw_str).await?;
+    // Use a labeled lofi device so the disk appears as a real disk with
+    // partition table support. This allows zpool create -B to create the
+    // ESP and BIOS boot partitions.
+    info!("Step 2: Attaching labeled loopback device");
+    let device = crate::tools::loopback::attach_labeled(runner, raw_str).await?;
 
-    // Create a whole-disk ZFS pool. bootadm install-bootloader will later
-    // set up the UEFI ESP on this disk — it knows how to manage the EFI
-    // System Partition on the pool's device via the -M flag.
-    info!(device = %device, "Step 3: Creating ZFS pool");
-    crate::tools::zpool::create(runner, &pool_name, &device, &pool_props).await?;
+    // Create a bootable ZFS pool with -B flag, which creates:
+    //   - BIOS boot partition
+    //   - EFI System Partition (256MB)
+    //   - ZFS data partition (remainder)
+    info!(device = %device, "Step 3: Creating bootable ZFS pool (-B)");
+    crate::tools::zpool::create_bootable(runner, &pool_name, &device, &pool_props).await?;
 
-    // ESP and ZFS partition paths — on illumos, bootadm creates these when
-    // it runs install-bootloader with -M. For now track them for the finalize step.
-    let efi_part = format!("{device}s0");
-    let zfs_part = device.clone();
+    // Partition device paths created by zpool -B on a labeled lofi:
+    // p0 = whole disk, p1 = EFI System Partition, p2 = ZFS data
+    let efi_part = format!("{device}p1");
+    let zfs_part = format!("{device}p2");
 
     info!("Step 4: Creating boot environment structure");
     crate::tools::zfs::create(
