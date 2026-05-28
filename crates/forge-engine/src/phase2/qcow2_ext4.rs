@@ -131,6 +131,28 @@ pub async fn finalize_ext4(
         )
         .await?;
 
+    // Install fallback bootloader for UEFI removable media path.
+    // grub-install --no-nvram creates /EFI/ubuntu/grubx64.efi but does
+    // NOT create the fallback /EFI/BOOT/BOOTX64.EFI that OVMF uses when
+    // there are no NVRAM boot entries. Without this, UEFI boot fails with
+    // "failed to load Boot0001 ... Not Found" and falls through to PXE.
+    info!("Installing fallback BOOTX64.EFI for UEFI removable media path");
+    let boot_dir = format!("{mount_str}/boot/efi/EFI/BOOT");
+    let src = format!("{mount_str}/boot/efi/EFI/ubuntu/grubx64.efi");
+    let dst = format!("{mount_str}/boot/efi/EFI/BOOT/BOOTX64.EFI");
+    // mkdir -p the BOOT directory (grub-install may not have created it)
+    runner
+        .run(
+            "mkdir",
+            &["-p", &boot_dir],
+        )
+        .await?;
+    // Copy the GRUB EFI binary to the fallback path
+    runner
+        .run("cp", &[&src, &dst])
+        .await?;
+
+
     // BIOS: install to the disk device (uses the BIOS boot partition automatically)
     // The loopback device is visible via the bind-mounted /dev
     let bios_result = runner
