@@ -18,6 +18,7 @@
 - [Customizations](./spec/customizations.md)
 - [Targets](./spec/targets.md)
 - [Builder Configuration](./spec/builder.md)
+- [Builder Binary](./spec/builder-binary.md)
 
 # Composability
 
