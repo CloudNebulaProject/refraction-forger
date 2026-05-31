@@ -151,7 +151,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let layer = create_layer(tmp.path()).unwrap();
 
-        assert!(layer.data.len() > 0);
+        assert!(!layer.data.is_empty());
         assert!(layer.digest.starts_with("sha256:"));
         assert!(layer.uncompressed_digest.starts_with("sha256:"));
         // Empty tar still has end-of-archive markers
@@ -171,7 +171,7 @@ mod tests {
         assert!(layer.uncompressed_digest.starts_with("sha256:"));
         // Uncompressed tar is larger than just the file content (includes headers)
         assert!(layer.uncompressed_size > 13);
-        assert!(layer.data.len() > 0);
+        assert!(!layer.data.is_empty());
 
         // Verify we can decompress the gzip layer
         let decoder = flate2::read::GzDecoder::new(layer.data.as_slice());

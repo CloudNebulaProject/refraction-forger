@@ -14,8 +14,10 @@ pub fn build_artifact(
     staging_root: &Path,
     output_dir: &Path,
     _files_dir: &Path,
+    output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
-    let output_path = output_dir.join(format!("{}.tar.gz", target.name));
+    let output_path =
+        output_dir.join(format!("{}.tar.gz", super::artifact_base(target, output_name)));
     info!(path = %output_path.display(), "Creating artifact tarball");
 
     let file = std::fs::File::create(&output_path)?;
@@ -64,4 +66,57 @@ pub fn build_artifact(
 
     info!(path = %output_path.display(), "Artifact tarball created");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use spec_parser::schema::TargetKind;
+    use tempfile::TempDir;
+
+    fn make_target(name: &str) -> Target {
+        Target {
+            name: name.to_string(),
+            kind: TargetKind::Artifact,
+            disk_size: None,
+            bootloader: None,
+            filesystem: None,
+            push_to: None,
+            entrypoint: None,
+            environment: None,
+            pool: None,
+        }
+    }
+
+    #[test]
+    fn artifact_uses_target_name_by_default() {
+        let staging = TempDir::new().unwrap();
+        let output = TempDir::new().unwrap();
+        std::fs::write(staging.path().join("file"), b"x").unwrap();
+
+        let target = make_target("rootfs");
+        build_artifact(&target, staging.path(), output.path(), staging.path(), None).unwrap();
+
+        assert!(output.path().join("rootfs.tar.gz").exists());
+    }
+
+    #[test]
+    fn artifact_output_name_overrides_target_name() {
+        let staging = TempDir::new().unwrap();
+        let output = TempDir::new().unwrap();
+        std::fs::write(staging.path().join("file"), b"x").unwrap();
+
+        let target = make_target("rootfs");
+        build_artifact(
+            &target,
+            staging.path(),
+            output.path(),
+            staging.path(),
+            Some("solstice-ubuntu-22.04"),
+        )
+        .unwrap();
+
+        assert!(output.path().join("solstice-ubuntu-22.04.tar.gz").exists());
+        assert!(!output.path().join("rootfs.tar.gz").exists());
+    }
 }

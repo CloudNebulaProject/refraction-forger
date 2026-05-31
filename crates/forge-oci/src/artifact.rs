@@ -93,7 +93,7 @@ pub async fn push_qcow2_artifact(
     let config = Config::new(config_json, QCOW2_CONFIG_MEDIA_TYPE.to_string(), None);
 
     let image_manifest =
-        oci_client::manifest::OciImageManifest::build(&[layer.clone()], &config, None);
+        oci_client::manifest::OciImageManifest::build(std::slice::from_ref(&layer), &config, None);
 
     info!(
         reference = %reference,

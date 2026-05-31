@@ -7,6 +7,7 @@ The `builder` block configures the ephemeral VM used for remote builds. This is 
 ```kdl
 builder {
     image "oci://ghcr.io/cloudnebulaproject/omnios-builder:latest"
+    binary "https://artifacts.lan/forger-{triple}" sha256="9a3f…c0"
     vcpus 4
     memory 4096
     disk 20
@@ -16,9 +17,29 @@ builder {
 | Property | Required | Default | Description |
 |---|---|---|---|
 | `image` | No | Distro-specific default | Builder VM image (OCI ref, URL, or path) |
+| `binary` | No | Dev/release fallback | Source of the `forger` binary run inside the VM (see below) |
 | `vcpus` | No | Host-dependent | Number of virtual CPUs |
 | `memory` | No | Host-dependent | Memory in MB |
 | `disk` | No | 20 (GB) | Disk overlay size in GB |
+
+## Builder Binary
+
+The `binary` child overrides where Forger gets the `forger` binary that drives
+Phase 2 *inside* the builder VM. It takes one argument (the source) and an
+optional `sha256` property:
+
+```kdl
+builder {
+    binary "http://artifacts.lan/forger-{triple}" sha256="9a3f…c0"
+}
+```
+
+The source may be a local `/path`, an `http(s)://` URL, or an `oci://`
+reference. The `{triple}` token expands to the builder's Rust target triple
+(`x86_64-unknown-linux-gnu` for Ubuntu, `x86_64-unknown-illumos` for OmniOS),
+so one line works for both Linux and illumos builders. See
+[Builder Binary](./builder-binary.md) for the full treatment (source kinds,
+sha256 pinning, caching, OCI artifacts, and the CLI/env overrides).
 
 ## Image Sources
 

@@ -57,6 +57,21 @@ enum Commands {
         /// Override builder VM image (path, URL, or oci:// reference)
         #[arg(long)]
         builder_image: Option<String>,
+
+        /// Override the forger binary run inside the builder VM
+        /// (a /path, http(s):// URL, or oci:// reference; supports the
+        /// `{triple}` template token)
+        #[arg(long)]
+        builder_binary: Option<String>,
+
+        /// sha256 hex pin for `--builder-binary` (URL/OCI sources)
+        #[arg(long, requires = "builder_binary")]
+        builder_binary_sha256: Option<String>,
+
+        /// Override the output artifact base name (default: the target name).
+        /// Requires `--target` to disambiguate which artifact to rename.
+        #[arg(long, requires = "target")]
+        output_name: Option<String>,
     },
 
     /// Validate a spec file (parse + resolve includes)
@@ -137,6 +152,9 @@ async fn main() -> Result<()> {
             use_builder,
             skip_push,
             builder_image,
+            builder_binary,
+            builder_binary_sha256,
+            output_name,
         } => {
             commands::build::run(
                 &spec,
@@ -147,6 +165,9 @@ async fn main() -> Result<()> {
                 use_builder,
                 skip_push,
                 builder_image.as_deref(),
+                builder_binary.as_deref(),
+                builder_binary_sha256.as_deref(),
+                output_name.as_deref(),
                 output_mode,
             )
             .await?;
@@ -171,4 +192,54 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn output_name_requires_target() {
+        let err = Args::try_parse_from([
+            "forger",
+            "build",
+            "--spec",
+            "img.kdl",
+            "--output-name",
+            "custom",
+        ])
+        .unwrap_err();
+        // clap surfaces the unmet `requires = "target"` constraint.
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn output_name_with_target_is_accepted() {
+        let parsed = Args::try_parse_from([
+            "forger",
+            "build",
+            "--spec",
+            "img.kdl",
+            "--target",
+            "vm",
+            "--output-name",
+            "custom",
+        ]);
+        assert!(parsed.is_ok());
+    }
+
+    #[test]
+    fn builder_binary_sha256_requires_builder_binary() {
+        let err = Args::try_parse_from([
+            "forger",
+            "build",
+            "--spec",
+            "img.kdl",
+            "--builder-binary-sha256",
+            "abc",
+        ])
+        .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
+    }
 }

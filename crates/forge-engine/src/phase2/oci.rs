@@ -11,6 +11,7 @@ pub fn build_oci(
     staging_root: &Path,
     output_dir: &Path,
     distro: &DistroFamily,
+    output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
     info!("Building OCI container image");
 
@@ -43,11 +44,12 @@ pub fn build_oci(
     }
 
     // Build manifest and config
-    let (config_json, manifest_json) = forge_oci::manifest::build_manifest(&[layer.clone()], &options)
-        .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
+    let (config_json, manifest_json) =
+        forge_oci::manifest::build_manifest(std::slice::from_ref(&layer), &options)
+            .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
 
     // Write OCI Image Layout
-    let oci_output = output_dir.join(format!("{}-oci", target.name));
+    let oci_output = output_dir.join(format!("{}-oci", super::artifact_base(target, output_name)));
     forge_oci::layout::write_oci_layout(&oci_output, &[layer], &config_json, &manifest_json)
         .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
 
@@ -86,7 +88,7 @@ mod tests {
         std::fs::write(staging.path().join("etc/motd"), "Welcome\n").unwrap();
 
         let target = make_target("container", None, None);
-        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS, None).unwrap();
 
         let oci_dir = output.path().join("container-oci");
         assert!(oci_dir.exists());
@@ -115,7 +117,7 @@ mod tests {
             }),
         );
 
-        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS, None).unwrap();
 
         let oci_dir = output.path().join("app-oci");
         assert!(oci_dir.join("oci-layout").exists());
@@ -134,8 +136,28 @@ mod tests {
         let output = TempDir::new().unwrap();
 
         let target = make_target("minimal", None, None);
-        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS).unwrap();
+        build_oci(&target, staging.path(), output.path(), &DistroFamily::OmniOS, None).unwrap();
 
         assert!(output.path().join("minimal-oci/oci-layout").exists());
+    }
+
+    #[test]
+    fn test_build_oci_output_name_overrides_dir() {
+        let staging = TempDir::new().unwrap();
+        let output = TempDir::new().unwrap();
+
+        let target = make_target("container", None, None);
+        build_oci(
+            &target,
+            staging.path(),
+            output.path(),
+            &DistroFamily::OmniOS,
+            Some("custom-name"),
+        )
+        .unwrap();
+
+        // The override renames the layout dir; the target name is not used.
+        assert!(output.path().join("custom-name-oci/oci-layout").exists());
+        assert!(!output.path().join("container-oci").exists());
     }
 }

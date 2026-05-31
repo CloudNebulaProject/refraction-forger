@@ -18,6 +18,9 @@ forger build [OPTIONS] --spec <PATH>
 | `--use-builder` | Force build inside a builder VM |
 | `--skip-push` | Don't push to registry after build |
 | `--builder-image <SPEC>` | Override builder VM image |
+| `--builder-binary <SOURCE>` | Override the `forger` binary run inside the builder VM (`/path`, `http(s)://`, or `oci://`; supports `{triple}`). Takes precedence over the spec `builder.binary` block. |
+| `--builder-binary-sha256 <HEX>` | sha256 pin for `--builder-binary` (requires `--builder-binary`) |
+| `--output-name <NAME>` | Override the output artifact base name (default: the target name). Requires `--target`. |
 
 ### Examples
 
@@ -33,7 +36,20 @@ forger build --spec images/omnios-bloody-disk.kdl --local --output-dir /tmp/imag
 
 # Build with custom builder image
 forger build --spec images/ubuntu-rust-ci.kdl --builder-image /path/to/builder.qcow2
+
+# Override the builder forger binary (with sha256 pin)
+forger build --spec images/ubuntu-rust-ci.kdl \
+  --builder-binary "https://artifacts.lan/forger-{triple}" \
+  --builder-binary-sha256 9a3f...c0
+
+# Rename the output artifact (requires --target)
+forger build --spec images/ubuntu-rust-ci.kdl \
+  --target vm --output-name solstice-ubuntu-22.04
+# -> output/solstice-ubuntu-22.04.qcow2
 ```
+
+See [Builder Binary](../spec/builder-binary.md) for the source kinds, caching,
+and OCI artifact contract.
 
 ## forger validate
 
@@ -142,3 +158,6 @@ vm (qcow2)
 |---|---|
 | `GITHUB_TOKEN` | Used for GHCR authentication when pushing |
 | `RUST_LOG` | Logging level (e.g., `info`, `debug`, `trace`) |
+| `FORGER_BUILDER_BINARY` | Builder `forger` binary source (same syntax as `--builder-binary`). Consulted after the CLI flag and spec block, before the dev/release fallbacks. |
+| `FORGER_BUILDER_BINARY_SHA256` | sha256 pin for `FORGER_BUILDER_BINARY` |
+| `FORGER_OCI_BEARER` | Pre-resolved bearer token for pulling an `oci://` builder binary from a private registry |

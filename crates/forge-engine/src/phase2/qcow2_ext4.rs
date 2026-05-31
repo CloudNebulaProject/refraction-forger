@@ -32,14 +32,16 @@ pub async fn prepare_ext4(
     target: &Target,
     output_dir: &Path,
     runner: &dyn ToolRunner,
+    output_name: Option<&str>,
 ) -> Result<PreparedExt4, ForgeError> {
     let disk_size = target
         .disk_size
         .as_deref()
         .ok_or(ForgeError::MissingDiskSize)?;
 
-    let raw_path = output_dir.join(format!("{}.raw", target.name));
-    let qcow2_path = output_dir.join(format!("{}.qcow2", target.name));
+    let base = super::artifact_base(target, output_name);
+    let raw_path = output_dir.join(format!("{base}.raw"));
+    let qcow2_path = output_dir.join(format!("{base}.qcow2"));
     let raw_str = raw_path.to_str().unwrap();
 
     info!(disk_size, "Step 1: Creating raw disk image");

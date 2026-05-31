@@ -26,6 +26,9 @@ pub struct BuildContext<'a> {
     pub runner: &'a dyn ToolRunner,
     /// Skip OCI registry push after build (host-side push handles it instead).
     pub skip_push: bool,
+    /// Override for the output artifact base name (default: the target name).
+    /// Only valid for single-target builds.
+    pub output_name: Option<&'a str>,
     /// Output handler for progress display.
     pub output: OutputHandler,
 }
@@ -60,6 +63,7 @@ impl<'a> BuildContext<'a> {
                         self.files_dir,
                         self.output_dir,
                         &distro,
+                        self.output_name,
                     )
                     .await?;
                     self.output
@@ -78,7 +82,8 @@ impl<'a> BuildContext<'a> {
     async fn build_qcow2(&self, target: &Target) -> Result<(), ForgeError> {
         self.output.phase_start("Phase 2 prepare: disk image setup");
         let prepared =
-            phase2::qcow2::prepare_qcow2(target, self.output_dir, self.runner).await?;
+            phase2::qcow2::prepare_qcow2(target, self.output_dir, self.runner, self.output_name)
+                .await?;
         self.output.phase_done("Phase 2 prepare: disk image setup");
 
         self.output.phase_start("Phase 1: rootfs assembly into target");
@@ -118,6 +123,7 @@ impl<'a> BuildContext<'a> {
                 self.output_dir,
                 &distro,
                 &self.spec.metadata.version,
+                self.output_name,
             )
             .await?;
         }

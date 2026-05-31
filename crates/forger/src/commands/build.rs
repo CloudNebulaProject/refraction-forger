@@ -7,6 +7,7 @@ use miette::{Context, IntoDiagnostic};
 use tracing::info;
 
 /// Build an image from a spec file.
+#[allow(clippy::too_many_arguments)]
 pub async fn run(
     spec_path: &PathBuf,
     target: Option<&str>,
@@ -16,6 +17,9 @@ pub async fn run(
     use_builder: bool,
     skip_push: bool,
     builder_image: Option<&str>,
+    builder_binary: Option<&str>,
+    builder_binary_sha256: Option<&str>,
+    output_name: Option<&str>,
     output_mode: OutputMode,
 ) -> miette::Result<()> {
     let output = OutputHandler::new(output_mode);
@@ -56,6 +60,9 @@ pub async fn run(
                 target,
                 profiles,
                 builder_image,
+                builder_binary,
+                builder_binary_sha256,
+                output_name,
                 skip_push,
             )
             .await
@@ -71,7 +78,13 @@ pub async fn run(
     // Suppress unused variable warnings when builder feature is disabled
     #[cfg(not(feature = "builder"))]
     {
-        let _ = (local, use_builder, builder_image);
+        let _ = (
+            local,
+            use_builder,
+            builder_image,
+            builder_binary,
+            builder_binary_sha256,
+        );
     }
 
     let runner = SystemToolRunner::new(output.clone());
@@ -82,6 +95,7 @@ pub async fn run(
         output_dir,
         runner: &runner,
         skip_push,
+        output_name,
         output: output.clone(),
     };
 

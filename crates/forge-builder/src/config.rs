@@ -71,6 +71,7 @@ mod tests {
     fn spec_overrides_defaults() {
         let node = BuilderNode {
             image: Some("oci://custom/image:v1".to_string()),
+            binary: None,
             vcpus: Some(4),
             memory: Some(4096),
             disk: Some(50),
@@ -86,6 +87,7 @@ mod tests {
     fn partial_spec_fills_remaining_with_defaults() {
         let node = BuilderNode {
             image: None,
+            binary: None,
             vcpus: Some(8),
             memory: None,
             disk: None,
