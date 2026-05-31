@@ -37,6 +37,54 @@ pub enum BuilderError {
     )]
     BinaryDownloadFailed { url: String, detail: String },
 
+    #[error("invalid builder binary source {input:?}: {detail}")]
+    #[diagnostic(
+        code(forge_builder::binary_source_invalid),
+        help("use a /path, ./relative/path, http(s):// URL, or oci:// reference")
+    )]
+    // NB: the field is named `input` rather than `source` because thiserror
+    // treats a field literally named `source` as the `Error::source()` cause
+    // (which must itself be an error type).
+    BinarySourceInvalid { input: String, detail: String },
+
+    #[error("sha256 mismatch for builder binary from {url}: expected {expected}, got {got}")]
+    #[diagnostic(
+        code(forge_builder::binary_sha256_mismatch),
+        help("the fetched bytes do not match the configured sha256 — verify the source or update the pin")
+    )]
+    BinarySha256Mismatch {
+        url: String,
+        expected: String,
+        got: String,
+    },
+
+    #[error("OCI pull failed for {reference}: {detail}")]
+    #[diagnostic(
+        code(forge_builder::oci_pull_failed),
+        help("check the registry is reachable and credentials are available (docker login, or FORGER_OCI_BEARER)")
+    )]
+    OciPullFailed { reference: String, detail: String },
+
+    #[error("OCI image {reference} must have exactly one layer, found {layer_count}")]
+    #[diagnostic(
+        code(forge_builder::oci_malformed),
+        help("publish the forger binary as a single-layer OCI artifact; for multi-platform, template {{triple}} into a per-platform tag")
+    )]
+    OciMalformed {
+        reference: String,
+        layer_count: usize,
+    },
+
+    #[error("OCI artifact {reference} has unsupported layer media type {media_type}")]
+    #[diagnostic(
+        code(forge_builder::oci_unsupported_layer),
+        help("publish with: oras push <ref> ./forger:application/vnd.refraction.forger.binary.v1")
+    )]
+    OciUnsupportedLayer {
+        reference: String,
+        media_type: String,
+    },
+
     #[error("file transfer to builder VM failed: {detail}")]
     #[diagnostic(
         code(forge_builder::transfer_failed),

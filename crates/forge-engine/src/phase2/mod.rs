@@ -21,6 +21,7 @@ pub async fn execute(
     files_dir: &Path,
     output_dir: &Path,
     distro: &DistroFamily,
+    output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
     info!(
         target = %target.name,
@@ -30,10 +31,10 @@ pub async fn execute(
 
     match target.kind {
         TargetKind::Oci => {
-            oci::build_oci(target, staging_root, output_dir, distro)?;
+            oci::build_oci(target, staging_root, output_dir, distro, output_name)?;
         }
         TargetKind::Artifact => {
-            artifact::build_artifact(target, staging_root, output_dir, files_dir)?;
+            artifact::build_artifact(target, staging_root, output_dir, files_dir, output_name)?;
         }
         TargetKind::Qcow2 => {
             unreachable!("QCOW2 targets are handled by the orchestrator via prepare/finalize/cleanup");
@@ -50,9 +51,11 @@ pub async fn push_qcow2_if_configured(
     output_dir: &Path,
     distro: &DistroFamily,
     version: &str,
+    output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
     if let Some(ref push_ref) = target.push_to {
-        let qcow2_path = output_dir.join(format!("{}.qcow2", target.name));
+        let qcow2_path =
+            output_dir.join(format!("{}.qcow2", output_name.unwrap_or(&target.name)));
         info!(
             reference = %push_ref,
             path = %qcow2_path.display(),

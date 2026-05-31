@@ -29,14 +29,17 @@ pub async fn prepare_qcow2(
     target: &Target,
     output_dir: &Path,
     runner: &dyn ToolRunner,
+    output_name: Option<&str>,
 ) -> Result<PreparedQcow2, ForgeError> {
     match target.filesystem.as_deref().unwrap_or("zfs") {
         "zfs" => {
-            let prepared = super::qcow2_zfs::prepare_zfs(target, output_dir, runner).await?;
+            let prepared =
+                super::qcow2_zfs::prepare_zfs(target, output_dir, runner, output_name).await?;
             Ok(PreparedQcow2::Zfs(prepared))
         }
         "ext4" => {
-            let prepared = super::qcow2_ext4::prepare_ext4(target, output_dir, runner).await?;
+            let prepared =
+                super::qcow2_ext4::prepare_ext4(target, output_dir, runner, output_name).await?;
             Ok(PreparedQcow2::Ext4(prepared))
         }
         other => Err(ForgeError::UnsupportedFilesystem {
@@ -118,7 +121,7 @@ mod tests {
                 }
             }
 
-            prepare_qcow2(&target, tmpdir.path(), &FailRunner).await
+            prepare_qcow2(&target, tmpdir.path(), &FailRunner, None).await
         });
 
         assert!(result.is_err());

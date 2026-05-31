@@ -11,13 +11,21 @@ use crate::error::BuilderError;
 /// and pushes them via `forge_oci::artifact`. This mirrors
 /// `forge_engine::phase2::push_qcow2_if_configured()` but runs on the
 /// host where `GITHUB_TOKEN` is available.
-pub async fn push_qcow2_outputs(spec: &ImageSpec, output_dir: &Path) -> Result<(), BuilderError> {
+pub async fn push_qcow2_outputs(
+    spec: &ImageSpec,
+    output_dir: &Path,
+    output_name: Option<&str>,
+) -> Result<(), BuilderError> {
     for target in &spec.targets {
         let Some(ref push_ref) = target.push_to else {
             continue;
         };
 
-        let qcow2_path = output_dir.join(format!("{}.qcow2", target.name));
+        // `--output-name` overrides the `{target.name}.qcow2` filename. It is a
+        // single-target build (the CLI requires `--target` alongside it), so
+        // this names the one artifact that was produced.
+        let qcow2_path =
+            output_dir.join(format!("{}.qcow2", output_name.unwrap_or(&target.name)));
 
         if !qcow2_path.exists() {
             info!(

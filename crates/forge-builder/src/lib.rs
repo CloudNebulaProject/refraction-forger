@@ -7,11 +7,12 @@ pub mod push;
 pub mod transfer;
 
 use std::io::{stderr, stdout};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use spec_parser::schema::{DistroFamily, ImageSpec};
+use spec_parser::schema::{BuilderNode, DistroFamily, ImageSpec};
 use tracing::info;
 
+use crate::binary::BinarySource;
 use crate::config::BuilderConfig;
 use crate::error::BuilderError;
 
@@ -25,6 +26,7 @@ use crate::error::BuilderError;
 /// 5. Runs the build via SSH
 /// 6. Downloads output artifacts
 /// 7. Tears down the VM (always, even on error)
+#[allow(clippy::too_many_arguments)]
 pub async fn run_in_builder(
     spec: &ImageSpec,
     spec_path: &Path,
@@ -33,6 +35,9 @@ pub async fn run_in_builder(
     target: Option<&str>,
     profiles: &[String],
     builder_image: Option<&str>,
+    builder_binary: Option<&str>,
+    builder_binary_sha256: Option<&str>,
+    output_name: Option<&str>,
     skip_push: bool,
 ) -> Result<(), BuilderError> {
     let distro = DistroFamily::from_distro_str(spec.distro.as_deref());
@@ -43,12 +48,20 @@ pub async fn run_in_builder(
         config.image = img.to_string();
     }
 
-    let binary = binary::resolve_forger_binary(&distro).await?;
+    // Resolve the forger binary source: CLI flag wins over the spec block;
+    // the env var and dev/release fallbacks are handled inside the resolver.
+    let binary_source = resolve_binary_source(
+        builder_binary,
+        builder_binary_sha256,
+        spec.builder.as_ref(),
+        spec_path,
+    )?;
+    let binary = binary::resolve_forger_binary(&distro, binary_source.as_ref()).await?;
 
     info!("Starting builder VM for remote build");
     let session = lifecycle::BuilderSession::start(&config).await?;
 
-    let result = run_build_in_session(&session, spec, &binary.path, spec_path, files_dir, output_dir, target, profiles, skip_push).await;
+    let result = run_build_in_session(&session, spec, &binary.path, spec_path, files_dir, output_dir, target, profiles, output_name, skip_push).await;
 
     // On failure, try to collect diagnostic info before teardown
     if let Err(ref e) = result {
@@ -63,6 +76,34 @@ pub async fn run_in_builder(
     }
 
     result
+}
+
+/// Choose the configured builder-binary source, if any. The CLI flag takes
+/// precedence over the spec `builder.binary` block; relative CLI paths resolve
+/// against the current working directory, spec paths against the spec file's
+/// directory. Returns `None` when nothing is configured here (the resolver then
+/// consults `FORGER_BUILDER_BINARY` and the dev/release fallbacks).
+fn resolve_binary_source(
+    cli_source: Option<&str>,
+    cli_sha256: Option<&str>,
+    builder: Option<&BuilderNode>,
+    spec_path: &Path,
+) -> Result<Option<BinarySource>, BuilderError> {
+    if let Some(src) = cli_source {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        return Ok(Some(BinarySource::parse(src, cli_sha256, &cwd)?));
+    }
+
+    if let Some(bin) = builder.and_then(|b| b.binary.as_ref()) {
+        let spec_dir = spec_path.parent().unwrap_or_else(|| Path::new("."));
+        return Ok(Some(BinarySource::parse(
+            &bin.source,
+            bin.sha256.as_deref(),
+            spec_dir,
+        )?));
+    }
+
+    Ok(None)
 }
 
 /// Verify the builder VM has working network connectivity (DNS + HTTP).
@@ -182,6 +223,7 @@ fn collect_diagnostics(session: &lifecycle::BuilderSession) {
     tracing::warn!("--- End Diagnostics ---");
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_build_in_session(
     session: &lifecycle::BuilderSession,
     spec: &ImageSpec,
@@ -191,6 +233,7 @@ async fn run_build_in_session(
     output_dir: &Path,
     target: Option<&str>,
     profiles: &[String],
+    output_name: Option<&str>,
     skip_push: bool,
 ) -> Result<(), BuilderError> {
     // Verify network connectivity (DNS) before doing anything
@@ -210,6 +253,10 @@ async fn run_build_in_session(
 
     if let Some(t) = target {
         cmd.push_str(&format!(" -t {t}"));
+    }
+
+    if let Some(name) = output_name {
+        cmd.push_str(&format!(" --output-name {name}"));
     }
 
     for p in profiles {
@@ -246,7 +293,7 @@ async fn run_build_in_session(
 
     // Host-side push: push QCOW2 outputs from the host where GITHUB_TOKEN is available
     if !skip_push {
-        push::push_qcow2_outputs(spec, output_dir).await?;
+        push::push_qcow2_outputs(spec, output_dir, output_name).await?;
     }
 
     Ok(())

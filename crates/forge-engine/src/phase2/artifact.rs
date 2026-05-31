@@ -14,8 +14,10 @@ pub fn build_artifact(
     staging_root: &Path,
     output_dir: &Path,
     _files_dir: &Path,
+    output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
-    let output_path = output_dir.join(format!("{}.tar.gz", target.name));
+    let output_path =
+        output_dir.join(format!("{}.tar.gz", output_name.unwrap_or(&target.name)));
     info!(path = %output_path.display(), "Creating artifact tarball");
 
     let file = std::fs::File::create(&output_path)?;
