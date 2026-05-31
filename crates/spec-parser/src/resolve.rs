@@ -472,4 +472,39 @@ mod tests {
         let err = result.unwrap_err();
         assert!(matches!(err, ResolveError::CircularInclude { .. }));
     }
+
+    #[test]
+    fn test_child_builder_binary_overrides_base_atomically() {
+        let tmp = TempDir::new().unwrap();
+
+        let base_kdl = r#"
+            metadata name="base" version="0.0.1"
+            repositories {}
+            builder {
+                binary "http://base.lan/forger-{triple}" sha256="aaaa"
+                vcpus 2
+            }
+        "#;
+        fs::write(tmp.path().join("base.kdl"), base_kdl).unwrap();
+
+        let child_kdl = r#"
+            metadata name="child" version="1.0.0"
+            base "base.kdl"
+            repositories {}
+            builder {
+                binary "oci://ghcr.io/child/forger:{triple}"
+            }
+        "#;
+
+        let spec = crate::parse(child_kdl).unwrap();
+        let resolved = resolve(spec, tmp.path()).unwrap();
+
+        let builder = resolved.builder.as_ref().unwrap();
+        // Child's builder block replaces the base's entirely (no field merge):
+        // the child binary wins and the base's vcpus does NOT leak through.
+        let binary = builder.binary.as_ref().unwrap();
+        assert_eq!(binary.source, "oci://ghcr.io/child/forger:{triple}");
+        assert_eq!(binary.sha256, None);
+        assert_eq!(builder.vcpus, None);
+    }
 }

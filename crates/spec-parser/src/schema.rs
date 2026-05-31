@@ -77,6 +77,12 @@ pub struct BuilderNode {
     #[knuffel(child, unwrap(argument))]
     pub image: Option<String>,
 
+    /// Source of the `forger` binary to run inside the builder VM. Overrides
+    /// the dev/release fallbacks. Resolved as a path, http(s):// URL, or
+    /// oci:// reference, with `{triple}` templating and optional sha256 pin.
+    #[knuffel(child)]
+    pub binary: Option<BuilderBinary>,
+
     #[knuffel(child, unwrap(argument))]
     pub vcpus: Option<u16>,
 
@@ -85,6 +91,20 @@ pub struct BuilderNode {
 
     #[knuffel(child, unwrap(argument))]
     pub disk: Option<u32>,
+}
+
+/// A configured source for the builder `forger` binary.
+///
+/// `source` is a `/path`, `http(s)://` URL, or `oci://` reference, optionally
+/// containing the `{triple}` template token (substituted at resolve time with
+/// the builder's Rust target triple). `sha256`, when present, pins the binary
+/// content for integrity / supply-chain hygiene.
+#[derive(Debug, Decode)]
+pub struct BuilderBinary {
+    #[knuffel(argument)]
+    pub source: String,
+    #[knuffel(property)]
+    pub sha256: Option<String>,
 }
 
 #[derive(Debug, Default, Decode)]

@@ -305,4 +305,56 @@ mod tests {
         let spec = parse(kdl).expect("Failed to parse KDL");
         assert!(spec.builder.is_none());
     }
+
+    #[test]
+    fn test_parse_builder_binary_with_sha256() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+                image "https://cloud-images.ubuntu.com/jammy.img"
+                binary "http://artifacts.lan/forger-{triple}" sha256="9a3fc0"
+                vcpus 4
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        let builder = spec.builder.as_ref().unwrap();
+        let binary = builder.binary.as_ref().expect("binary block present");
+        // {triple} token is preserved verbatim — no KDL-level interpolation.
+        assert_eq!(binary.source, "http://artifacts.lan/forger-{triple}");
+        assert_eq!(binary.sha256.as_deref(), Some("9a3fc0"));
+        assert_eq!(builder.vcpus, Some(4));
+    }
+
+    #[test]
+    fn test_parse_builder_binary_without_sha256() {
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+                binary "oci://ghcr.io/myorg/forger:linux-gnu"
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        let binary = spec.builder.as_ref().unwrap().binary.as_ref().unwrap();
+        assert_eq!(binary.source, "oci://ghcr.io/myorg/forger:linux-gnu");
+        assert_eq!(binary.sha256, None);
+    }
+
+    #[test]
+    fn test_parse_builder_without_binary_is_backward_compatible() {
+        // A builder block that omits `binary` parses with binary == None.
+        let kdl = r#"
+            metadata name="test" version="0.1.0"
+            repositories {}
+            builder {
+                vcpus 2
+            }
+        "#;
+
+        let spec = parse(kdl).expect("Failed to parse KDL");
+        assert!(spec.builder.as_ref().unwrap().binary.is_none());
+    }
 }
