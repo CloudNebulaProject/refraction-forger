@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use forge_engine::output::{OutputHandler, OutputMode};
 use miette::{Context, IntoDiagnostic};
@@ -75,7 +75,7 @@ async fn push_artifact(
 
 /// Push an OCI Image Layout to a registry.
 async fn push_oci_layout(
-    image_dir: &PathBuf,
+    image_dir: &Path,
     reference: &str,
     auth: &forge_oci::registry::AuthConfig,
     insecure: &[String],

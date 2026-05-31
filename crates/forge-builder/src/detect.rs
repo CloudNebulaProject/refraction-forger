@@ -29,9 +29,7 @@ mod tests {
     fn make_spec(distro: Option<&str>, targets: &[(&str, &str)]) -> ImageSpec {
         let kdl = {
             let mut s = String::new();
-            s.push_str(&format!(
-                "metadata name=\"test\" version=\"0.1.0\"\n"
-            ));
+            s.push_str("metadata name=\"test\" version=\"0.1.0\"\n");
             if let Some(d) = distro {
                 s.push_str(&format!("distro \"{d}\"\n"));
             }
@@ -82,11 +80,8 @@ mod tests {
             Some("ubuntu-22.04"),
             &[("vm", "qcow2"), ("img", "oci")],
         );
-        // When targeting only "img" (OCI), no qcow2 → no builder needed for that reason
-        let is_root = unsafe { libc::geteuid() == 0 };
-        // Only the OmniOS check or root check matters; "img" is OCI so qcow2 check is false
-        assert_eq!(needs_builder(&spec, Some("img"), false), false || !is_root && false);
-        // Actually: has_qcow2 is false (target "img" is oci), distro is Ubuntu not OmniOS
+        // Targeting only "img" (an OCI target) means no qcow2 target is selected,
+        // and the distro is Ubuntu (not OmniOS), so no builder is needed.
         assert!(!needs_builder(&spec, Some("img"), false));
     }
 }

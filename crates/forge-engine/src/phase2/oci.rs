@@ -44,8 +44,9 @@ pub fn build_oci(
     }
 
     // Build manifest and config
-    let (config_json, manifest_json) = forge_oci::manifest::build_manifest(&[layer.clone()], &options)
-        .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
+    let (config_json, manifest_json) =
+        forge_oci::manifest::build_manifest(std::slice::from_ref(&layer), &options)
+            .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
 
     // Write OCI Image Layout
     let oci_output = output_dir.join(format!("{}-oci", output_name.unwrap_or(&target.name)));
