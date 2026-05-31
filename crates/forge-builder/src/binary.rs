@@ -6,6 +6,7 @@ use tracing::info;
 use crate::error::BuilderError;
 
 /// Resolved forger binary for use inside a builder VM.
+#[derive(Debug)]
 pub struct ResolvedBinary {
     pub path: PathBuf,
 }
@@ -712,5 +713,353 @@ mod tests {
             format!("forger-t-{expected}")
         );
         assert_eq!(expected.len(), 40, "sha1 hex is 40 chars");
+    }
+}
+
+#[cfg(test)]
+mod integration {
+    use super::*;
+    use serde_json::json;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    const TRIPLE: &str = "x86_64-unknown-linux-gnu";
+
+    fn cache_entries(dir: &Path) -> Vec<String> {
+        std::fs::read_dir(dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.starts_with("forger-"))
+            .collect()
+    }
+
+    // --- HTTP -------------------------------------------------------------
+
+    #[tokio::test]
+    async fn http_fetch_substitutes_triple_caches_and_skips_second_request() {
+        let server = MockServer::start().await;
+        let payload = vec![7u8; 1024];
+
+        // The request path must contain the *resolved* triple, not `{triple}`.
+        Mock::given(method("GET"))
+            .and(path(format!("/forger-{TRIPLE}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .expect(1) // second resolve is a cache hit -> no HTTP
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Url {
+            url: format!("{}/forger-{{triple}}", server.uri()),
+            sha256: None,
+        };
+
+        let r1 = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r1.path).unwrap(), payload);
+
+        let r2 = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(r1.path, r2.path, "second resolve returns the same cache entry");
+        // `expect(1)` is asserted when `server` drops.
+    }
+
+    #[tokio::test]
+    async fn http_sha256_verifies_on_match() {
+        let server = MockServer::start().await;
+        let payload = b"the-real-binary".to_vec();
+        let good = bytes_sha256(&payload);
+
+        Mock::given(method("GET"))
+            .and(path("/f"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Url {
+            url: format!("{}/f", server.uri()),
+            sha256: Some(good.clone()),
+        };
+
+        let r = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r.path).unwrap(), payload);
+        assert_eq!(
+            r.path.file_name().unwrap().to_string_lossy(),
+            format!("forger-{TRIPLE}-sha256-{good}")
+        );
+    }
+
+    #[tokio::test]
+    async fn http_sha256_mismatch_is_not_cached() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/f"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(b"wrong".to_vec()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Url {
+            url: format!("{}/f", server.uri()),
+            sha256: Some("deadbeef".to_string()),
+        };
+
+        let err = fetch_into(&src, TRIPLE, cache.path()).await.unwrap_err();
+        assert!(matches!(err, BuilderError::BinarySha256Mismatch { .. }));
+        assert!(
+            cache_entries(cache.path()).is_empty(),
+            "mismatched download must not populate the cache"
+        );
+    }
+
+    #[tokio::test]
+    async fn http_404_configured_source_errors_without_fallthrough() {
+        // A configured source that 404s is an error, not a fall-through to the
+        // dev/release fallbacks. resolve_forger_binary short-circuits on the
+        // configured source, so no release-URL request is ever made.
+        let server = MockServer::start().await;
+        // No mock mounted -> wiremock responds 404 to everything.
+        let src = BinarySource::Url {
+            url: format!("{}/missing", server.uri()),
+            sha256: None,
+        };
+
+        let err = resolve_forger_binary(&DistroFamily::Ubuntu, Some(&src))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, BuilderError::BinaryDownloadFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn http_cache_poisoning_is_detected_and_refetched() {
+        let server = MockServer::start().await;
+        let payload = b"correct-binary".to_vec();
+        let good = bytes_sha256(&payload);
+
+        Mock::given(method("GET"))
+            .and(path("/f"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        // Pre-populate the content-addressed entry with WRONG bytes.
+        let entry = cache.path().join(format!("forger-{TRIPLE}-sha256-{good}"));
+        std::fs::write(&entry, b"poisoned").unwrap();
+
+        let src = BinarySource::Url {
+            url: format!("{}/f", server.uri()),
+            sha256: Some(good.clone()),
+        };
+
+        let r = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(
+            std::fs::read(&r.path).unwrap(),
+            payload,
+            "poisoned entry must be replaced with the verified bytes"
+        );
+    }
+
+    // --- local path -------------------------------------------------------
+
+    #[tokio::test]
+    async fn path_source_copies_and_survives_source_deletion() {
+        let cache = tempfile::tempdir().unwrap();
+        let srcdir = tempfile::tempdir().unwrap();
+        let srcfile = srcdir.path().join("forger");
+        std::fs::write(&srcfile, b"local-bin").unwrap();
+
+        let src = BinarySource::Path(srcfile.clone());
+
+        let r1 = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r1.path).unwrap(), b"local-bin");
+
+        // Delete the source; the cache must still serve valid bytes (copy, not symlink).
+        std::fs::remove_file(&srcfile).unwrap();
+        let r2 = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r2.path).unwrap(), b"local-bin");
+    }
+
+    // --- env var ----------------------------------------------------------
+
+    #[test]
+    fn env_source_parses_url_and_normalizes_sha() {
+        // SAFETY: no other test reads these env vars concurrently —
+        // resolve_forger_binary only consults them when `source` is None,
+        // which no parallel test does.
+        unsafe {
+            std::env::set_var("FORGER_BUILDER_BINARY", "https://h/forger-{triple}");
+            std::env::set_var("FORGER_BUILDER_BINARY_SHA256", "ABCD");
+        }
+        let parsed = env_source().unwrap().unwrap();
+        unsafe {
+            std::env::remove_var("FORGER_BUILDER_BINARY");
+            std::env::remove_var("FORGER_BUILDER_BINARY_SHA256");
+        }
+        assert_eq!(
+            parsed,
+            BinarySource::Url {
+                url: "https://h/forger-{triple}".to_string(),
+                sha256: Some("abcd".to_string()),
+            }
+        );
+    }
+
+    // --- OCI --------------------------------------------------------------
+
+    fn registry_host(server: &MockServer) -> String {
+        server.uri().strip_prefix("http://").unwrap().to_string()
+    }
+
+    async fn mount_manifest(server: &MockServer, name: &str, tag: &str, body: String) {
+        Mock::given(method("GET"))
+            .and(path(format!("/v2/{name}/manifests/{tag}")))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("Content-Type", "application/vnd.oci.image.manifest.v1+json")
+                    .set_body_string(body),
+            )
+            .mount(server)
+            .await;
+    }
+
+    fn config_descriptor() -> serde_json::Value {
+        // "{}" config blob; never fetched by the resolver.
+        let cfg = b"{}";
+        json!({
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": format!("sha256:{}", bytes_sha256(cfg)),
+            "size": cfg.len(),
+        })
+    }
+
+    #[tokio::test]
+    async fn oci_single_layer_artifact_pulls_payload() {
+        let server = MockServer::start().await;
+        let payload = vec![42u8; 2048];
+        let digest = format!("sha256:{}", bytes_sha256(&payload));
+
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [{
+                "mediaType": OCI_BINARY_MEDIA_TYPE,
+                "digest": digest,
+                "size": payload.len(),
+            }],
+        })
+        .to_string();
+
+        mount_manifest(&server, "forger", "v1", manifest).await;
+        Mock::given(method("GET"))
+            .and(path(format!("/v2/forger/blobs/{digest}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:v1", registry_host(&server)),
+            sha256: None,
+        };
+
+        let r = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r.path).unwrap(), payload);
+    }
+
+    #[tokio::test]
+    async fn oci_multi_layer_is_malformed() {
+        let server = MockServer::start().await;
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [
+                {"mediaType": OCI_BINARY_MEDIA_TYPE, "digest": "sha256:aa", "size": 1},
+                {"mediaType": OCI_BINARY_MEDIA_TYPE, "digest": "sha256:bb", "size": 1},
+            ],
+        })
+        .to_string();
+        mount_manifest(&server, "forger", "v1", manifest).await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:v1", registry_host(&server)),
+            sha256: None,
+        };
+
+        let err = fetch_into(&src, TRIPLE, cache.path()).await.unwrap_err();
+        assert!(matches!(
+            err,
+            BuilderError::OciMalformed { layer_count: 2, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn oci_unsupported_layer_media_type_is_rejected() {
+        let server = MockServer::start().await;
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [{
+                "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+                "digest": "sha256:cc",
+                "size": 1,
+            }],
+        })
+        .to_string();
+        mount_manifest(&server, "forger", "v1", manifest).await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:v1", registry_host(&server)),
+            sha256: None,
+        };
+
+        let err = fetch_into(&src, TRIPLE, cache.path()).await.unwrap_err();
+        match err {
+            BuilderError::OciUnsupportedLayer { media_type, .. } => {
+                assert_eq!(media_type, "application/vnd.oci.image.layer.v1.tar+gzip");
+            }
+            other => panic!("expected OciUnsupportedLayer, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn oci_sha256_mismatch_is_not_cached() {
+        let server = MockServer::start().await;
+        let payload = vec![9u8; 512];
+        let digest = format!("sha256:{}", bytes_sha256(&payload));
+
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [{
+                "mediaType": OCI_BINARY_MEDIA_TYPE,
+                "digest": digest,
+                "size": payload.len(),
+            }],
+        })
+        .to_string();
+        mount_manifest(&server, "forger", "v1", manifest).await;
+        Mock::given(method("GET"))
+            .and(path(format!("/v2/forger/blobs/{digest}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:v1", registry_host(&server)),
+            // Pin a sha that does not match the (valid) layer payload.
+            sha256: Some(bytes_sha256(b"something-else")),
+        };
+
+        let err = fetch_into(&src, TRIPLE, cache.path()).await.unwrap_err();
+        assert!(matches!(err, BuilderError::BinarySha256Mismatch { .. }));
+        assert!(cache_entries(cache.path()).is_empty());
     }
 }
