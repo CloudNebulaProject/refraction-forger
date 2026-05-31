@@ -298,3 +298,89 @@ async fn run_build_in_session(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use spec_parser::schema::BuilderBinary;
+
+    fn builder_with(binary: Option<BuilderBinary>) -> BuilderNode {
+        BuilderNode {
+            image: None,
+            binary,
+            vcpus: None,
+            memory: None,
+            disk: None,
+        }
+    }
+
+    fn spec_binary(source: &str) -> BuilderBinary {
+        BuilderBinary {
+            source: source.to_string(),
+            sha256: None,
+        }
+    }
+
+    // Priority: CLI flag overrides the spec block.
+    #[test]
+    fn cli_source_overrides_spec_block() {
+        let builder = builder_with(Some(spec_binary("oci://spec/forger:1")));
+        let src = resolve_binary_source(
+            Some("oci://cli/forger:2"),
+            None,
+            Some(&builder),
+            Path::new("/tmp/img.kdl"),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            src,
+            BinarySource::Oci {
+                reference: "cli/forger:2".to_string(),
+                sha256: None,
+            }
+        );
+    }
+
+    // Priority: with no CLI flag, the spec block is used.
+    #[test]
+    fn spec_block_used_when_no_cli() {
+        let builder = builder_with(Some(spec_binary("oci://spec/forger:1")));
+        let src = resolve_binary_source(None, None, Some(&builder), Path::new("/tmp/img.kdl"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            src,
+            BinarySource::Oci {
+                reference: "spec/forger:1".to_string(),
+                sha256: None,
+            }
+        );
+    }
+
+    // Priority: nothing configured here -> None (resolver then tries env/dev/release).
+    #[test]
+    fn none_when_neither_cli_nor_spec() {
+        let builder = builder_with(None);
+        assert!(
+            resolve_binary_source(None, None, Some(&builder), Path::new("/tmp/img.kdl"))
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            resolve_binary_source(None, None, None, Path::new("/tmp/img.kdl"))
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    // Spec-block relative paths resolve against the spec file's directory.
+    #[test]
+    fn spec_relative_path_resolves_against_spec_dir() {
+        let builder = builder_with(Some(spec_binary("./bin/forger")));
+        let src = resolve_binary_source(None, None, Some(&builder), Path::new("/tmp/foo/img.kdl"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(src, BinarySource::Path(PathBuf::from("/tmp/foo/bin/forger")));
+    }
+}

@@ -17,7 +17,7 @@ pub fn build_artifact(
     output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
     let output_path =
-        output_dir.join(format!("{}.tar.gz", output_name.unwrap_or(&target.name)));
+        output_dir.join(format!("{}.tar.gz", super::artifact_base(target, output_name)));
     info!(path = %output_path.display(), "Creating artifact tarball");
 
     let file = std::fs::File::create(&output_path)?;

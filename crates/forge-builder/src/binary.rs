@@ -81,9 +81,12 @@ impl BinarySource {
 
         if s.starts_with('/') || s.starts_with("./") || s.starts_with("../") {
             // PathBuf::join replaces base_dir for absolute inputs and appends
-            // for relative ones — exactly the semantics we want. `{triple}`
-            // (if present) survives as a literal path component.
-            return Ok(BinarySource::Path(base_dir.join(s)));
+            // for relative ones — exactly the semantics we want. Strip a leading
+            // `./` so `./bin/forger` under `/foo` resolves to `/foo/bin/forger`
+            // (not `/foo/./bin/forger`). `{triple}` (if present) survives as a
+            // literal path component.
+            let rel = s.strip_prefix("./").unwrap_or(s);
+            return Ok(BinarySource::Path(base_dir.join(rel)));
         }
 
         Err(BuilderError::BinarySourceInvalid {
@@ -641,8 +644,9 @@ mod tests {
 
     #[test]
     fn parse_relative_path_uses_base_dir() {
-        let src = BinarySource::parse("./bin/forger", None, Path::new("/spec/dir")).unwrap();
-        assert_eq!(src, BinarySource::Path(PathBuf::from("/spec/dir/./bin/forger")));
+        // Matches the spec example: `./bin/forger` at `/tmp/foo` -> `/tmp/foo/bin/forger`.
+        let src = BinarySource::parse("./bin/forger", None, Path::new("/tmp/foo")).unwrap();
+        assert_eq!(src, BinarySource::Path(PathBuf::from("/tmp/foo/bin/forger")));
     }
 
     #[test]
@@ -882,27 +886,55 @@ mod integration {
 
     // --- env var ----------------------------------------------------------
 
-    #[test]
-    fn env_source_parses_url_and_normalizes_sha() {
-        // SAFETY: no other test reads these env vars concurrently —
-        // resolve_forger_binary only consults them when `source` is None,
-        // which no parallel test does.
+    #[tokio::test]
+    async fn env_var_source_is_parsed_and_overrides_dev_fallback() {
+        // This is the ONLY test that mutates FORGER_BUILDER_BINARY / XDG_CACHE_HOME,
+        // so it is race-free even under parallel execution. It covers the
+        // "env-var source" bullet end to end: parsing + sha normalization,
+        // {triple} substitution, sha256 verification, and the fact that the env
+        // var beats the dev/release fallbacks.
+        let server = MockServer::start().await;
+        let payload = vec![3u8; 256];
+        Mock::given(method("GET"))
+            .and(path(format!("/forger-{TRIPLE}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let sha = bytes_sha256(&payload);
+
+        // SAFETY: see the comment above — no other test touches these vars.
         unsafe {
-            std::env::set_var("FORGER_BUILDER_BINARY", "https://h/forger-{triple}");
-            std::env::set_var("FORGER_BUILDER_BINARY_SHA256", "ABCD");
+            std::env::set_var(
+                "FORGER_BUILDER_BINARY",
+                format!("{}/forger-{{triple}}", server.uri()),
+            );
+            std::env::set_var("FORGER_BUILDER_BINARY_SHA256", sha.to_uppercase());
+            std::env::set_var("XDG_CACHE_HOME", cache.path());
         }
+
+        // (a) parsing + sha normalization
         let parsed = env_source().unwrap().unwrap();
+        // (b) priority: the env var resolves (and verifies) even though the dev
+        // fallback would otherwise apply.
+        let resolved = resolve_forger_binary(&DistroFamily::Ubuntu, None).await;
+
         unsafe {
             std::env::remove_var("FORGER_BUILDER_BINARY");
             std::env::remove_var("FORGER_BUILDER_BINARY_SHA256");
+            std::env::remove_var("XDG_CACHE_HOME");
         }
+
         assert_eq!(
             parsed,
             BinarySource::Url {
-                url: "https://h/forger-{triple}".to_string(),
-                sha256: Some("abcd".to_string()),
+                url: format!("{}/forger-{{triple}}", server.uri()),
+                sha256: Some(sha.clone()),
             }
         );
+        let resolved = resolved.expect("env-var source should resolve");
+        assert_eq!(std::fs::read(&resolved.path).unwrap(), payload);
     }
 
     // --- OCI --------------------------------------------------------------
@@ -1061,5 +1093,77 @@ mod integration {
         let err = fetch_into(&src, TRIPLE, cache.path()).await.unwrap_err();
         assert!(matches!(err, BuilderError::BinarySha256Mismatch { .. }));
         assert!(cache_entries(cache.path()).is_empty());
+    }
+
+    #[tokio::test]
+    async fn oci_octet_stream_layer_is_accepted() {
+        let server = MockServer::start().await;
+        let payload = vec![5u8; 777];
+        let digest = format!("sha256:{}", bytes_sha256(&payload));
+
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [{
+                "mediaType": "application/octet-stream",
+                "digest": digest,
+                "size": payload.len(),
+            }],
+        })
+        .to_string();
+        mount_manifest(&server, "forger", "v1", manifest).await;
+        Mock::given(method("GET"))
+            .and(path(format!("/v2/forger/blobs/{digest}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:v1", registry_host(&server)),
+            sha256: None,
+        };
+
+        let r = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r.path).unwrap(), payload);
+    }
+
+    #[tokio::test]
+    async fn oci_reference_substitutes_triple_before_pull() {
+        // `{triple}` in an OCI reference must be substituted before the registry
+        // call: the manifest is served under the *resolved* tag, so a literal
+        // `{triple}` request would 404.
+        let server = MockServer::start().await;
+        let payload = vec![8u8; 321];
+        let digest = format!("sha256:{}", bytes_sha256(&payload));
+
+        let manifest = json!({
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": config_descriptor(),
+            "layers": [{
+                "mediaType": OCI_BINARY_MEDIA_TYPE,
+                "digest": digest,
+                "size": payload.len(),
+            }],
+        })
+        .to_string();
+        // Tag is the resolved triple, not the literal token.
+        mount_manifest(&server, "forger", TRIPLE, manifest).await;
+        Mock::given(method("GET"))
+            .and(path(format!("/v2/forger/blobs/{digest}")))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(payload.clone()))
+            .mount(&server)
+            .await;
+
+        let cache = tempfile::tempdir().unwrap();
+        let src = BinarySource::Oci {
+            reference: format!("{}/forger:{{triple}}", registry_host(&server)),
+            sha256: None,
+        };
+
+        let r = fetch_into(&src, TRIPLE, cache.path()).await.unwrap();
+        assert_eq!(std::fs::read(&r.path).unwrap(), payload);
     }
 }

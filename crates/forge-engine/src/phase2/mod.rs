@@ -11,6 +11,12 @@ use tracing::info;
 
 use crate::error::ForgeError;
 
+/// Resolve the output artifact base name shared by every Phase 2 producer:
+/// the `--output-name` override if present, otherwise the target's own name.
+pub fn artifact_base<'a>(target: &'a Target, output_name: Option<&'a str>) -> &'a str {
+    output_name.unwrap_or(&target.name)
+}
+
 /// Execute Phase 2 for non-QCOW2 targets (OCI, Artifact).
 ///
 /// QCOW2 targets are handled directly by the orchestrator in `lib.rs` via
@@ -54,8 +60,7 @@ pub async fn push_qcow2_if_configured(
     output_name: Option<&str>,
 ) -> Result<(), ForgeError> {
     if let Some(ref push_ref) = target.push_to {
-        let qcow2_path =
-            output_dir.join(format!("{}.qcow2", output_name.unwrap_or(&target.name)));
+        let qcow2_path = output_dir.join(format!("{}.qcow2", artifact_base(target, output_name)));
         info!(
             reference = %push_ref,
             path = %qcow2_path.display(),
@@ -88,4 +93,56 @@ pub async fn push_qcow2_if_configured(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use spec_parser::schema::TargetKind;
+
+    fn target(name: &str) -> Target {
+        Target {
+            name: name.to_string(),
+            kind: TargetKind::Qcow2,
+            disk_size: None,
+            bootloader: None,
+            filesystem: None,
+            push_to: None,
+            entrypoint: None,
+            environment: None,
+            pool: None,
+        }
+    }
+
+    // `artifact_base` is the single source of truth every Phase 2 producer
+    // (qcow2-ext4, qcow2-zfs, oci, artifact tar) uses to name its output.
+    #[test]
+    fn artifact_base_defaults_to_target_name() {
+        let t = target("vm");
+        assert_eq!(artifact_base(&t, None), "vm");
+    }
+
+    #[test]
+    fn artifact_base_uses_output_name_override() {
+        let t = target("vm");
+        assert_eq!(artifact_base(&t, Some("solstice-ubuntu-22.04")), "solstice-ubuntu-22.04");
+    }
+
+    // Show the resulting filenames per format, with and without the override.
+    #[test]
+    fn output_filenames_across_formats() {
+        let t = target("vm");
+
+        let base = artifact_base(&t, None);
+        assert_eq!(format!("{base}.qcow2"), "vm.qcow2"); // qcow2-ext4 / qcow2-zfs
+        assert_eq!(format!("{base}.raw"), "vm.raw");
+        assert_eq!(format!("{base}.tar.gz"), "vm.tar.gz"); // artifact
+        assert_eq!(format!("{base}-oci"), "vm-oci"); // oci layout dir
+
+        let base = artifact_base(&t, Some("img"));
+        assert_eq!(format!("{base}.qcow2"), "img.qcow2");
+        assert_eq!(format!("{base}.raw"), "img.raw");
+        assert_eq!(format!("{base}.tar.gz"), "img.tar.gz");
+        assert_eq!(format!("{base}-oci"), "img-oci");
+    }
 }

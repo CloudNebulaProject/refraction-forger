@@ -49,7 +49,7 @@ pub fn build_oci(
             .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
 
     // Write OCI Image Layout
-    let oci_output = output_dir.join(format!("{}-oci", output_name.unwrap_or(&target.name)));
+    let oci_output = output_dir.join(format!("{}-oci", super::artifact_base(target, output_name)));
     forge_oci::layout::write_oci_layout(&oci_output, &[layer], &config_json, &manifest_json)
         .map_err(|e| ForgeError::OciBuild(e.to_string()))?;
 
